@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="ru"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Lokatsiyalar</title>
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    /* Peacock palette on Dobek-style black canvas */
+    --bg: #1d1e33;
+    --bg-elev: #0a0a0a;
+    --surface: #111418;
+    --surface-2: #181c22;
+    --tile: #1a1f26;
+    --tile-2: #232932;
+    --border: rgba(255, 255, 255, 0.06);
+    --border-strong: rgba(255, 255, 255, 0.10);
+    --text: #ffffff;
+    --text-dim: #8a949f;
+    --text-mute: #5a6470;
+    --accent: #3ddc97;       /* mint from peacock */
+    --accent-2: #1f8a7a;     /* deep teal */
+    --accent-glow: rgba(61, 220, 151, 0.18);
+    --pad: 20px;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Tahoma, system-ui, sans-serif;
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: contain;
+    min-height: 100vh;
+  }
+
+  #app {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    position: relative;
+    overflow: hidden;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Soft accent glow at top-right of home, very subtle */
+  #app::before {
+    content: '';
+    position: absolute;
+    top: -120px; right: -100px;
+    width: 320px; height: 320px;
+    background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.6;
+  }
+
+  /* Screens */
+  .screen {
+    position: absolute;
+    inset: 0;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    transition: transform 300ms cubic-bezier(0.22, 0.61, 0.36, 1),
+                opacity 240ms ease;
+    will-change: transform, opacity;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    z-index: 1;
+  }
+  .screen.enter-right { transform: translateX(100%); opacity: 0; }
+  .screen.exit-left   { transform: translateX(-18%); opacity: 0; pointer-events: none; }
+  .screen.exit-right  { transform: translateX(100%); opacity: 0; pointer-events: none; }
+  .screen.active      { transform: translateX(0); opacity: 1; }
+
+  .screen::-webkit-scrollbar { display: none; }
+  .screen { scrollbar-width: none; }
+
+  /* ---------- HEADER ---------- */
+  .header {
+    padding: 32px var(--pad) 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: relative;
+  }
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 22px;
+    height: 32px;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+  }
+  .brand-mark {
+    width: 30px; height: 30px;
+    border-radius: 9px;
+    background: var(--accent);
+    color: #0a1410;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .brand-mark svg { width: 16px; height: 16px; stroke-width: 2.5; }
+  .brand-name {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+  .version {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-mute);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .header h1 {
+    margin: 0;
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.05;
+  }
+  .header h1 .hl { color: var(--accent); }
+
+  .header .subtitle {
+    color: var(--text-dim);
+    font-size: 15px;
+    font-weight: 400;
+    line-height: 1.4;
+    margin-top: 4px;
+    max-width: 90%;
+  }
+
+  /* Category screen header variant */
+  .header.cat {
+    padding-top: 24px;
+  }
+  .header.cat .topbar {
+    margin-bottom: 28px;
+  }
+  .header.cat h1 {
+    font-size: 28px;
+    line-height: 1.1;
+  }
+
+  .back-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    background: var(--tile);
+    border: 1px solid var(--border);
+    color: var(--text);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: transform 120ms ease, background 160ms ease;
+  }
+  .back-btn:active {
+    transform: scale(0.92);
+    background: var(--tile-2);
+  }
+  .back-btn svg { width: 18px; height: 18px; stroke-width: 2.2; }
+
+  .ghost-btn {
+    width: 38px; height: 38px;
+    border-radius: 11px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: default;
+  }
+  .ghost-btn svg { width: 17px; height: 17px; stroke-width: 2; }
+
+  /* ---------- SECTION LABEL ---------- */
+  .section-label {
+    padding: 18px var(--pad) 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-mute);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .section-label .count {
+    color: var(--accent);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+  }
+
+  /* ---------- CATEGORY LIST (horizontal rows) ---------- */
+  .cat-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 4px var(--pad) 32px;
+  }
+  .cat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px 16px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    position: relative;
+    transition: transform 120ms ease, opacity 120ms ease, background 160ms ease, border-color 160ms ease;
+    overflow: hidden;
+  }
+  .cat-card:active {
+    transform: scale(0.985);
+    opacity: 0.9;
+    background: var(--surface-2);
+  }
+  .cat-tile {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: var(--tile);
+    color: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .cat-tile svg { width: 22px; height: 22px; stroke-width: 1.75; }
+
+  .cat-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .cat-name {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    color: var(--text);
+  }
+  .cat-count {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .cat-count .dot {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: inline-block;
+  }
+  .cat-arrow {
+    width: 28px; height: 28px;
+    color: var(--text-mute);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: transform 160ms ease, color 160ms ease;
+  }
+  .cat-arrow svg { width: 16px; height: 16px; stroke-width: 2; }
+  .cat-card:active .cat-arrow {
+    color: var(--accent);
+    transform: translateX(3px);
+  }
+
+  /* ---------- LOCATION LIST ---------- */
+  .loc-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 4px var(--pad) 40px;
+  }
+  .loc-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 14px 14px 14px 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: transform 120ms ease, opacity 120ms ease, background 160ms ease, border-color 160ms ease;
+  }
+  .loc-card:active {
+    transform: scale(0.985);
+    opacity: 0.9;
+    background: var(--surface-2);
+  }
+  .loc-tile {
+    width: 42px; height: 42px;
+    border-radius: 12px;
+    background: var(--tile);
+    color: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .loc-tile svg { width: 20px; height: 20px; stroke-width: 1.75; }
+
+  .loc-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .loc-name {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    line-height: 1.3;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .loc-num {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-mute);
+    letter-spacing: 0.06em;
+    font-feature-settings: 'tnum';
+  }
+
+  .loc-arrow {
+    width: 28px; height: 28px;
+    color: var(--text-mute);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: transform 160ms ease, color 160ms ease;
+  }
+  .loc-arrow svg { width: 16px; height: 16px; stroke-width: 2; }
+  .loc-card:active .loc-arrow {
+    color: var(--accent);
+    transform: translateX(3px);
+  }
+
+  body.tg { background: #1d1e33; }
+</style>
+</head>
+<body>
+  <div id="app">
+
+    <!-- ============ HOME ============ -->
+    <section class="screen active" id="screen-home" data-screen-label="01 Home" data-comment-anchor="7c607437ef-section">
+      <header class="header home">
+        <div class="topbar" data-comment-anchor="04ed75c965-div">
+          <div class="brand">
+            <span class="brand-mark"><i data-lucide="map-pin"></i></span>
+            <span class="brand-name">Lokatsiyalar</span>
+          </div>
+          <span class="version">v 1.0</span>
+        </div>
+        <h1 data-comment-anchor="d1817f6ad0-h1">Kerakli joyni<br><span class="hl">toping</span></h1>
+        <div class="subtitle">Kategoriyani tanlang — Google Maps yo'nalishi avtomatik ochiladi</div>
+      </header>
+
+      <div class="section-label">
+        <span>Kategoriyalar</span>
+        <span class="count" id="cat-total"></span>
+      </div>
+
+      <div class="cat-grid" id="cat-grid"></div>
+    </section>
+
+    <!-- ============ CATEGORY ============ -->
+    <section class="screen enter-right" id="screen-category" data-screen-label="02 Category" aria-hidden="true">
+      <header class="header cat">
+        <div class="topbar">
+          <button class="back-btn" id="back-btn" aria-label="Orqaga">
+            <i data-lucide="arrow-left"></i>
+          </button>
+          <span class="ghost-btn" aria-hidden="true">
+            <i data-lucide="map"></i>
+          </span>
+        </div>
+        <h1 id="cat-title">—</h1>
+        <div class="subtitle" id="cat-sub">— ta joy</div>
+      </header>
+
+      <div class="section-label">
+        <span>Joylar</span>
+      </div>
+
+      <div class="loc-list" id="loc-list"></div>
+    </section>
+
+  </div>
+
+<script>
+  /* =========================================================
+     CATALOG DATA — edit here to add categories / locations
+     ========================================================= */
+  const catalog = {
+    mallar: {
+      name: "MALLAR",
+      icon: "shopping-bag",
+      locations: [
+        { name: "Al-Rashid MALL", url: "https://maps.app.goo.gl/u1xz96cdfVgGJf3u7?g_st=ic" },
+        { name: "Al-Noor MALL",   url: "https://maps.app.goo.gl/SNDKqcpLrCB7cvJP8?g_st=ic" },
+        { name: "Aliat MALL",     url: "https://maps.app.goo.gl/oXbV5psGtYGEgwt28?g_st=ic" },
+        { name: "Al-Manar MALL",  url: "https://maps.app.goo.gl/7Vqkybs4opGPxXjG8?g_st=ic" },
+      ],
+    },
+    fixed_price: {
+      name: "5.75 DO'KONLAR",
+      icon: "tag",
+      locations: [
+        { name: "AZHAR AL-BASEM",   url: "https://maps.app.goo.gl/ajWbRPj6ska2QRWu5?g_st=ic" },
+        { name: "WOW FIVE",         url: "https://maps.app.goo.gl/Z7C4GVa2d2C5BFC5A?g_st=ic" },
+        { name: "BARIQ AL-SHAMIL",  url: "https://maps.app.goo.gl/WzTcyf57k3kUmRw47?g_st=ic" },
+        { name: "FIVE RIYAL",       url: "https://maps.app.goo.gl/aJM1GFmtrywy5Yqq8?g_st=ic" },
+        { name: "BEST PRICES",      url: "https://maps.app.goo.gl/6rt1CioNA2Q9MYH48?g_st=ic" },
+      ],
+    },
+    stomatalogiyalar: {
+      name: "STOMATALOGIYALAR",
+      icon: "smile",
+      locations: [
+        { name: "Ariyd",         url: "https://maps.app.goo.gl/Yv5azU1d84p9dLzM8?g_st=ic" },
+        { name: "Safa Al-Madina", url: "https://maps.app.goo.gl/RvBwk76PPf5da7WQ8?g_st=ic" },
+        { name: "Al hijrah",     url: "https://maps.app.goo.gl/MtvAKSCsfJbRUGFd7?g_st=ic" },
+        { name: "Khalidiyya",    url: "https://maps.app.goo.gl/Crqc4vsMdhN9av8NA?g_st=ic" },
+      ],
+    },
+    // Add more categories here as needed:
+    // supermarkets: { name: "SUPERMARKETLAR", icon: "shopping-cart", locations: [...] },
+    // pharmacies:   { name: "DORIXONALAR",    icon: "cross",         locations: [...] },
+    // cafes:        { name: "KAFELAR",        icon: "coffee",        locations: [...] },
+    // restaurants:  { name: "RESTORANLAR",    icon: "utensils",      locations: [...] },
+    // electronics:  { name: "ELEKTRONIKA",    icon: "smartphone",    locations: [...] },
+    // banks:        { name: "BANKLAR",        icon: "landmark",      locations: [...] },
+    // gas_stations: { name: "ZAPRAVKALAR",    icon: "fuel",          locations: [...] },
+    // markets:      { name: "BOZORLAR",       icon: "store",         locations: [...] },
+  };
+
+  /* =========================================================
+     Telegram WebApp init (dark only)
+     ========================================================= */
+  const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+  if (tg) {
+    try {
+      tg.ready();
+      tg.expand();
+      document.body.classList.add('tg');
+      try { tg.setHeaderColor && tg.setHeaderColor('#1d1e33'); } catch (e) {}
+      try { tg.setBackgroundColor && tg.setBackgroundColor('#1d1e33'); } catch (e) {}
+    } catch (e) {}
+  }
+
+  function haptic(kind = 'light') {
+    try {
+      const hf = tg && tg.HapticFeedback;
+      if (!hf) return;
+      if (kind === 'select') hf.selectionChanged();
+      else if (kind === 'success') hf.notificationOccurred('success');
+      else hf.impactOccurred(kind);
+    } catch (e) {}
+  }
+
+  /* =========================================================
+     Rendering
+     ========================================================= */
+  const grid = document.getElementById('cat-grid');
+  const screenHome = document.getElementById('screen-home');
+  const screenCat  = document.getElementById('screen-category');
+  const backBtn    = document.getElementById('back-btn');
+  const catTitle   = document.getElementById('cat-title');
+  const catSub     = document.getElementById('cat-sub');
+  const catTotal   = document.getElementById('cat-total');
+  const locList    = document.getElementById('loc-list');
+
+  function renderHome() {
+    grid.innerHTML = '';
+    const ids = Object.keys(catalog);
+    catTotal.textContent = String(ids.length).padStart(2, '0');
+    ids.forEach((id) => {
+      const cat = catalog[id];
+      const card = document.createElement('div');
+      card.className = 'cat-card';
+      card.dataset.id = id;
+      card.innerHTML = `
+        <span class="cat-tile"><i data-lucide="${cat.icon}"></i></span>
+        <div class="cat-body">
+          <div class="cat-name">${escapeHtml(cat.name)}</div>
+          <div class="cat-count"><span class="dot"></span>${cat.locations.length} ta joy</div>
+        </div>
+        <span class="cat-arrow"><i data-lucide="chevron-right"></i></span>
+      `;
+      card.addEventListener('click', () => {
+        haptic('light');
+        openCategory(id);
+      });
+      grid.appendChild(card);
+    });
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function renderCategory(id) {
+    const cat = catalog[id];
+    if (!cat) return;
+    catTitle.textContent = cat.name;
+    catSub.textContent = `${cat.locations.length} ta joy`;
+    locList.innerHTML = '';
+    cat.locations.forEach((loc, i) => {
+      const card = document.createElement('div');
+      card.className = 'loc-card';
+      card.innerHTML = `
+        <span class="loc-tile"><i data-lucide="${cat.icon}"></i></span>
+        <div class="loc-body">
+          <div class="loc-name">${escapeHtml(loc.name)}</div>
+          <div class="loc-num">№ ${String(i + 1).padStart(2, '0')}</div>
+        </div>
+        <span class="loc-arrow"><i data-lucide="chevron-right"></i></span>
+      `;
+      card.addEventListener('click', () => {
+        haptic('light');
+        try { window.open(loc.url, '_blank'); } catch (e) {}
+      });
+      locList.appendChild(card);
+    });
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
+
+  /* =========================================================
+     Navigation w/ animation + Telegram BackButton
+     ========================================================= */
+  let currentScreen = 'home';
+
+  function openCategory(id) {
+    renderCategory(id);
+    screenHome.classList.remove('active');
+    screenHome.classList.add('exit-left');
+    screenCat.classList.remove('enter-right', 'exit-right');
+    void screenCat.offsetWidth;
+    screenCat.classList.add('active');
+    screenCat.setAttribute('aria-hidden', 'false');
+    screenHome.setAttribute('aria-hidden', 'true');
+    currentScreen = 'category';
+    if (tg && tg.BackButton) {
+      try { tg.BackButton.show(); } catch (e) {}
+    }
+    screenCat.scrollTop = 0;
+  }
+
+  function goHome() {
+    screenCat.classList.remove('active');
+    screenCat.classList.add('exit-right');
+    screenHome.classList.remove('exit-left');
+    void screenHome.offsetWidth;
+    screenHome.classList.add('active');
+    screenHome.setAttribute('aria-hidden', 'false');
+    screenCat.setAttribute('aria-hidden', 'true');
+    setTimeout(() => {
+      screenCat.classList.remove('exit-right');
+      screenCat.classList.add('enter-right');
+    }, 320);
+    currentScreen = 'home';
+    if (tg && tg.BackButton) {
+      try { tg.BackButton.hide(); } catch (e) {}
+    }
+  }
+
+  backBtn.addEventListener('click', () => {
+    haptic('light');
+    goHome();
+  });
+
+  if (tg && tg.BackButton) {
+    try {
+      tg.BackButton.onClick(() => {
+        if (currentScreen === 'category') goHome();
+      });
+    } catch (e) {}
+  }
+
+  // Init
+  renderHome();
+</script>
+
+
+</body></html>
