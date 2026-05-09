@@ -1,47 +1,68 @@
 {
   "mallar": {
-    "name": "MALLAR",
+    "name": "MALL LAR",
     "icon": "shopping-bag",
     "locations": [
-      { "name": "Al-Rashid MALL", "url": "https://maps.app.goo.gl/u1xz96cdfVgGJf3u7?g_st=ic" },
-      { "name": "Al-Noor MALL",   "url": "https://maps.app.goo.gl/SNDKqcpLrCB7cvJP8?g_st=ic" },
-      { "name": "Aliat MALL",     "url": "https://maps.app.goo.gl/oXbV5psGtYGEgwt28?g_st=ic" },
-      { "name": "Al-Manar MALL",  "url": "https://maps.app.goo.gl/7Vqkybs4opGPxXjG8?g_st=ic" }
+      { "name": "MALL LAR", "url": "https://t.me/lokatsiyamed/50" }
     ]
   },
-  "fixed_price": {
-    "name": "5.75 DO'KONLAR",
+  "bozorlar": {
+    "name": "BOZORLAR",
+    "icon": "store",
+    "locations": [
+      { "name": "Madina oziq-ovqat bozori", "url": "https://t.me/lokatsiyamed/174" },
+      { "name": "Haroj bozori",             "url": "https://t.me/lokatsiyamed/28"  }
+    ]
+  },
+  "riyal_5": {
+    "name": "5 RIYALLIK DO'KONLAR",
     "icon": "tag",
     "locations": [
-      { "name": "AZHAR AL-BASEM",   "url": "https://maps.app.goo.gl/ajWbRPj6ska2QRWu5?g_st=ic" },
-      { "name": "WOW FIVE",         "url": "https://maps.app.goo.gl/Z7C4GVa2d2C5BFC5A?g_st=ic" },
-      { "name": "BARIQ AL-SHAMIL",  "url": "https://maps.app.goo.gl/WzTcyf57k3kUmRw47?g_st=ic" },
-      { "name": "FIVE RIYAL",       "url": "https://maps.app.goo.gl/aJM1GFmtrywy5Yqq8?g_st=ic" },
-      { "name": "BEST PRICES",      "url": "https://maps.app.goo.gl/6rt1CioNA2Q9MYH48?g_st=ic" }
+      { "name": "5 RIYALLIK DO'KONLAR", "url": "https://t.me/lokatsiyamed/307" }
     ]
   },
-  "stomatalogiyalar": {
-    "name": "STOMATALOGIYALAR",
-    "icon": "smile",
+  "uy_jixozlari": {
+    "name": "UY JIXOZLARI",
+    "icon": "sofa",
     "locations": [
-      { "name": "Ariyd",            "url": "https://maps.app.goo.gl/Yv5azU1d84p9dLzM8?g_st=ic" },
-      { "name": "Safa Al-Madina",   "url": "https://maps.app.goo.gl/RvBwk76PPf5da7WQ8?g_st=ic" },
-      { "name": "Al hijrah",        "url": "https://maps.app.goo.gl/MtvAKSCsfJbRUGFd7?g_st=ic" },
-      { "name": "Khalidiyya",       "url": "https://maps.app.goo.gl/Crqc4vsMdhN9av8NA?g_st=ic" }
+      { "name": "Abdulatif",    "url": "https://t.me/lokatsiyamed/71"  },
+      { "name": "IKEA",         "url": "https://t.me/lokatsiyamed/43"  },
+      { "name": "Qasr Alwani",  "url": "https://t.me/lokatsiyamed/147" },
+      { "name": "Lu Lu",        "url": "https://t.me/lokatsiyamed/159" },
+      { "name": "Mustaqbal",    "url": "https://t.me/lokatsiyamed/164" },
+      { "name": "Dhifi Center", "url": "https://t.me/lokatsiyamed/301" }
     ]
   },
   "gaz_balonlar": {
     "name": "GAZ BALONLAR",
     "icon": "flame",
     "locations": [
-      { "name": "ARIYD",      "url": "https://maps.app.goo.gl/AvjtK2kn14dh5M4T8?g_st=ic" },
-      { "name": "HALIDIYYA",  "url": "https://maps.app.goo.gl/1Bx5M9Bha16cNded6?g_st=ic" },
-      { "name": "KING FAHD",  "url": "https://maps.app.goo.gl/toRh5VZrZr8DmQaw5?g_st=ic" },
-      { "name": "HIZAM",      "url": "https://maps.app.goo.gl/D2FYgT3SFZPtDrhz9?g_st=ic" },
-      { "name": "BANIDHAFAR", "url": "https://maps.app.goo.gl/H4FtAkXbwHs6UrJ38?g_st=ic" },
-      { "name": "QURBON",     "url": "https://maps.app.goo.gl/F7zFPDAQt9uyGis19?g_st=ic" },
-      { "name": "ANABIS",     "url": "https://maps.app.goo.gl/i3ht7A3UoJEUNths6?g_st=ic" },
-      { "name": "SOULTANA",   "url": "https://maps.app.goo.gl/GYb2bA6ttSsuH8zZ9?g_st=ic" }
+      { "name": "GAZ BALONLAR", "url": "https://t.me/lokatsiyamed/75" }
+    ]
+  },
+  "tish_doktorlar": {
+    "name": "TISH DOKTORLAR",
+    "icon": "smile",
+    "locations": [
+      { "name": "TISH DOKTORLAR", "url": "https://t.me/lokatsiyamed/166" }
+    ]
+  },
+  "hurmo_boglari": {
+    "name": "HURMO BOG'LARI",
+    "icon": "trees",
+    "locations": [
+      { "name": "Kaylah bog'i",       "url": "https://t.me/lokatsiyamed/311" },
+      { "name": "Karaanef Al Nakhel", "url": "https://t.me/lokatsiyamed/255" },
+      { "name": "Uhud osti bog'i",    "url": "https://t.me/lokatsiyamed/204" },
+      { "name": "Top 3 ta bog'",      "url": "https://t.me/lokatsiyamed/165" }
+    ]
+  },
+  "aeroportlar": {
+    "name": "AEROPORTLAR",
+    "icon": "plane",
+    "locations": [
+      { "name": "Jidda - 3 ta aeroport", "url": "https://t.me/lokatsiyamed/182" },
+      { "name": "Madina aeroport",       "url": "https://t.me/lokatsiyamed/210" }
     ]
   }
 }
