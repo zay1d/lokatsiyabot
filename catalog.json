@@ -29,5 +29,19 @@
       { "name": "Al hijrah",        "url": "https://maps.app.goo.gl/MtvAKSCsfJbRUGFd7?g_st=ic" },
       { "name": "Khalidiyya",       "url": "https://maps.app.goo.gl/Crqc4vsMdhN9av8NA?g_st=ic" }
     ]
+  },
+  "gaz_balonlar": {
+    "name": "GAZ BALONLAR",
+    "icon": "flame",
+    "locations": [
+      { "name": "ARIYD",      "url": "https://maps.app.goo.gl/AvjtK2kn14dh5M4T8?g_st=ic" },
+      { "name": "HALIDIYYA",  "url": "https://maps.app.goo.gl/1Bx5M9Bha16cNded6?g_st=ic" },
+      { "name": "KING FAHD",  "url": "https://maps.app.goo.gl/toRh5VZrZr8DmQaw5?g_st=ic" },
+      { "name": "HIZAM",      "url": "https://maps.app.goo.gl/D2FYgT3SFZPtDrhz9?g_st=ic" },
+      { "name": "BANIDHAFAR", "url": "https://maps.app.goo.gl/H4FtAkXbwHs6UrJ38?g_st=ic" },
+      { "name": "QURBON",     "url": "https://maps.app.goo.gl/F7zFPDAQt9uyGis19?g_st=ic" },
+      { "name": "ANABIS",     "url": "https://maps.app.goo.gl/i3ht7A3UoJEUNths6?g_st=ic" },
+      { "name": "SOULTANA",   "url": "https://maps.app.goo.gl/GYb2bA6ttSsuH8zZ9?g_st=ic" }
+    ]
   }
 }
