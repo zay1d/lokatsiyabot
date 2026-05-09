@@ -1,0 +1,33 @@
+{
+  "mallar": {
+    "name": "MALLAR",
+    "icon": "shopping-bag",
+    "locations": [
+      { "name": "Al-Rashid MALL", "url": "https://maps.app.goo.gl/u1xz96cdfVgGJf3u7?g_st=ic" },
+      { "name": "Al-Noor MALL",   "url": "https://maps.app.goo.gl/SNDKqcpLrCB7cvJP8?g_st=ic" },
+      { "name": "Aliat MALL",     "url": "https://maps.app.goo.gl/oXbV5psGtYGEgwt28?g_st=ic" },
+      { "name": "Al-Manar MALL",  "url": "https://maps.app.goo.gl/7Vqkybs4opGPxXjG8?g_st=ic" }
+    ]
+  },
+  "fixed_price": {
+    "name": "5.75 DO'KONLAR",
+    "icon": "tag",
+    "locations": [
+      { "name": "AZHAR AL-BASEM",   "url": "https://maps.app.goo.gl/ajWbRPj6ska2QRWu5?g_st=ic" },
+      { "name": "WOW FIVE",         "url": "https://maps.app.goo.gl/Z7C4GVa2d2C5BFC5A?g_st=ic" },
+      { "name": "BARIQ AL-SHAMIL",  "url": "https://maps.app.goo.gl/WzTcyf57k3kUmRw47?g_st=ic" },
+      { "name": "FIVE RIYAL",       "url": "https://maps.app.goo.gl/aJM1GFmtrywy5Yqq8?g_st=ic" },
+      { "name": "BEST PRICES",      "url": "https://maps.app.goo.gl/6rt1CioNA2Q9MYH48?g_st=ic" }
+    ]
+  },
+  "stomatalogiyalar": {
+    "name": "STOMATALOGIYALAR",
+    "icon": "smile",
+    "locations": [
+      { "name": "Ariyd",            "url": "https://maps.app.goo.gl/Yv5azU1d84p9dLzM8?g_st=ic" },
+      { "name": "Safa Al-Madina",   "url": "https://maps.app.goo.gl/RvBwk76PPf5da7WQ8?g_st=ic" },
+      { "name": "Al hijrah",        "url": "https://maps.app.goo.gl/MtvAKSCsfJbRUGFd7?g_st=ic" },
+      { "name": "Khalidiyya",       "url": "https://maps.app.goo.gl/Crqc4vsMdhN9av8NA?g_st=ic" }
+    ]
+  }
+}
