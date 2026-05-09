@@ -472,7 +472,7 @@
             <span class="brand-mark"><i data-lucide="map-pin"></i></span>
             <span class="brand-name">Lokatsiyalar</span>
           </div>
-          <span class="version">v 1.1</span>
+          <span class="version">v 1.2</span>
         </div>
         <h1>Kerakli joyni<br><span class="hl">toping</span></h1>
         <div class="subtitle">Kategoriyani tanlang yoki qidiruvdan foydalaning</div>
@@ -728,6 +728,11 @@
       grid.querySelectorAll('.cat-card').forEach(card => {
         card.addEventListener('click', () => {
           haptic('light');
+          const cat = state.catalog[card.dataset.id];
+          if (cat && cat.locations.length === 1) {
+            openLocation(cat.locations[0]);
+            return;
+          }
           setRoute({ screen: 'list', mode: 'cat', id: card.dataset.id });
         });
       });
@@ -790,12 +795,7 @@
       card.addEventListener('click', (e) => {
         if (e.target.closest('[data-fav]')) return;
         haptic('light');
-        try {
-          if (tg && tg.openLink) tg.openLink(loc.url);
-          else window.open(loc.url, '_blank');
-        } catch (err) {
-          window.open(loc.url, '_blank');
-        }
+        openLocation(loc);
       });
 
       const favBtn = card.querySelector('[data-fav]');
@@ -808,6 +808,25 @@
         });
       }
     });
+  }
+
+  function openLocation(loc) {
+    const url = loc && loc.url;
+    if (!url) return;
+    const isTelegramLink = /^https?:\/\/t\.me\//i.test(url);
+    try {
+      if (isTelegramLink && tg && tg.openTelegramLink) {
+        tg.openTelegramLink(url);
+        return;
+      }
+      if (tg && tg.openLink) {
+        tg.openLink(url);
+        return;
+      }
+      window.open(url, '_blank');
+    } catch (e) {
+      try { window.open(url, '_blank'); } catch (_) {}
+    }
   }
 
   function renderList(view) {
