@@ -8,7 +8,6 @@
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <style>
   :root {
-    /* Peacock palette on Dobek-style black canvas */
     --bg: #1d1e33;
     --bg-elev: #0a0a0a;
     --surface: #111418;
@@ -20,8 +19,8 @@
     --text: #ffffff;
     --text-dim: #8a949f;
     --text-mute: #5a6470;
-    --accent: #3ddc97;       /* mint from peacock */
-    --accent-2: #1f8a7a;     /* deep teal */
+    --accent: #3ddc97;
+    --accent-2: #1f8a7a;
     --accent-glow: rgba(61, 220, 151, 0.18);
     --pad: 20px;
   }
@@ -48,7 +47,6 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
 
-  /* Soft accent glow at top-right of home, very subtle */
   #app::before {
     content: '';
     position: absolute;
@@ -60,7 +58,6 @@
     opacity: 0.6;
   }
 
-  /* Screens */
   .screen {
     position: absolute;
     inset: 0;
@@ -74,6 +71,7 @@
     -webkit-overflow-scrolling: touch;
     z-index: 1;
   }
+  body.no-anim .screen { transition: none !important; }
   .screen.enter-right { transform: translateX(100%); opacity: 0; }
   .screen.exit-left   { transform: translateX(-18%); opacity: 0; pointer-events: none; }
   .screen.exit-right  { transform: translateX(100%); opacity: 0; pointer-events: none; }
@@ -82,7 +80,6 @@
   .screen::-webkit-scrollbar { display: none; }
   .screen { scrollbar-width: none; }
 
-  /* ---------- HEADER ---------- */
   .header {
     padding: 32px var(--pad) 8px;
     display: flex;
@@ -143,19 +140,14 @@
     max-width: 90%;
   }
 
-  /* Category screen header variant */
-  .header.cat {
-    padding-top: 24px;
-  }
-  .header.cat .topbar {
-    margin-bottom: 28px;
-  }
+  .header.cat { padding-top: 24px; }
+  .header.cat .topbar { margin-bottom: 28px; }
   .header.cat h1 {
     font-size: 28px;
     line-height: 1.1;
   }
 
-  .back-btn {
+  .back-btn, .icon-btn {
     width: 38px;
     height: 38px;
     border-radius: 11px;
@@ -167,13 +159,16 @@
     justify-content: center;
     cursor: pointer;
     flex-shrink: 0;
-    transition: transform 120ms ease, background 160ms ease;
+    transition: transform 120ms ease, background 160ms ease, color 160ms ease;
+    padding: 0;
   }
-  .back-btn:active {
+  .back-btn:active, .icon-btn:active {
     transform: scale(0.92);
     background: var(--tile-2);
   }
-  .back-btn svg { width: 18px; height: 18px; stroke-width: 2.2; }
+  .back-btn svg, .icon-btn svg { width: 18px; height: 18px; stroke-width: 2.2; }
+  .icon-btn.on { color: var(--accent); }
+  .icon-btn.on svg { fill: currentColor; }
 
   .ghost-btn {
     width: 38px; height: 38px;
@@ -188,7 +183,54 @@
   }
   .ghost-btn svg { width: 17px; height: 17px; stroke-width: 2; }
 
-  /* ---------- SECTION LABEL ---------- */
+  /* Search */
+  .search-wrap {
+    position: relative;
+    padding: 8px var(--pad) 0;
+  }
+  .search-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 40px 12px 42px;
+    font-size: 15px;
+    color: var(--text);
+    font-family: inherit;
+    outline: none;
+    transition: border-color 160ms ease;
+  }
+  .search-input::placeholder { color: var(--text-mute); }
+  .search-input:focus { border-color: var(--accent); }
+  .search-icon {
+    position: absolute;
+    left: calc(var(--pad) + 14px);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-mute);
+    pointer-events: none;
+    display: inline-flex;
+  }
+  .search-icon svg { width: 17px; height: 17px; stroke-width: 2; }
+  .search-clear {
+    position: absolute;
+    right: calc(var(--pad) + 8px);
+    top: 50%;
+    transform: translateY(-50%);
+    width: 26px; height: 26px;
+    border-radius: 8px;
+    background: var(--tile-2);
+    border: none;
+    color: var(--text-dim);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+  }
+  .search-clear.show { display: inline-flex; }
+  .search-clear svg { width: 14px; height: 14px; stroke-width: 2.2; }
+
   .section-label {
     padding: 18px var(--pad) 10px;
     font-size: 12px;
@@ -206,14 +248,31 @@
     letter-spacing: 0.08em;
   }
 
-  /* ---------- CATEGORY LIST (horizontal rows) ---------- */
+  /* Favorites quick link on home */
+  .fav-quick {
+    margin: 4px var(--pad) 0;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, rgba(61, 220, 151, 0.12), rgba(61, 220, 151, 0.02));
+    border: 1px solid rgba(61, 220, 151, 0.22);
+    border-radius: 16px;
+    display: none;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: transform 120ms ease, opacity 120ms ease;
+  }
+  .fav-quick.show { display: flex; }
+  .fav-quick:active { transform: scale(0.985); opacity: 0.9; }
+  .fav-quick .cat-tile { background: var(--accent); color: #0a1410; }
+  .fav-quick .cat-tile svg { fill: currentColor; }
+
   .cat-grid {
     display: flex;
     flex-direction: column;
     gap: 10px;
     padding: 4px var(--pad) 32px;
   }
-  .cat-card {
+  .cat-card, .loc-card {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 16px;
@@ -227,12 +286,12 @@
     transition: transform 120ms ease, opacity 120ms ease, background 160ms ease, border-color 160ms ease;
     overflow: hidden;
   }
-  .cat-card:active {
+  .cat-card:active, .loc-card:active {
     transform: scale(0.985);
     opacity: 0.9;
     background: var(--surface-2);
   }
-  .cat-tile {
+  .cat-tile, .loc-tile {
     width: 44px; height: 44px;
     border-radius: 12px;
     background: var(--tile);
@@ -242,102 +301,35 @@
     justify-content: center;
     flex-shrink: 0;
   }
+  .loc-tile { width: 42px; height: 42px; }
   .cat-tile svg { width: 22px; height: 22px; stroke-width: 1.75; }
+  .loc-tile svg { width: 20px; height: 20px; stroke-width: 1.75; }
 
-  .cat-body {
+  .cat-body, .loc-body {
     flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 3px;
   }
-  .cat-name {
+  .cat-name, .loc-name {
     font-size: 16px;
     font-weight: 600;
     line-height: 1.2;
     letter-spacing: -0.01em;
     color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
-  .cat-count {
+  .loc-name { font-size: 15px; letter-spacing: -0.005em; line-height: 1.3; }
+  .cat-count, .loc-num {
     font-size: 13px;
     font-weight: 400;
     color: var(--text-dim);
     display: flex;
     align-items: center;
     gap: 6px;
-  }
-  .cat-count .dot {
-    width: 4px; height: 4px;
-    border-radius: 50%;
-    background: var(--accent);
-    display: inline-block;
-  }
-  .cat-arrow {
-    width: 28px; height: 28px;
-    color: var(--text-mute);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    transition: transform 160ms ease, color 160ms ease;
-  }
-  .cat-arrow svg { width: 16px; height: 16px; stroke-width: 2; }
-  .cat-card:active .cat-arrow {
-    color: var(--accent);
-    transform: translateX(3px);
-  }
-
-  /* ---------- LOCATION LIST ---------- */
-  .loc-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 4px var(--pad) 40px;
-  }
-  .loc-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 14px 14px 14px 14px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    cursor: pointer;
-    transition: transform 120ms ease, opacity 120ms ease, background 160ms ease, border-color 160ms ease;
-  }
-  .loc-card:active {
-    transform: scale(0.985);
-    opacity: 0.9;
-    background: var(--surface-2);
-  }
-  .loc-tile {
-    width: 42px; height: 42px;
-    border-radius: 12px;
-    background: var(--tile);
-    color: var(--accent);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-  .loc-tile svg { width: 20px; height: 20px; stroke-width: 1.75; }
-
-  .loc-body {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-  .loc-name {
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: -0.005em;
-    line-height: 1.3;
-    color: var(--text);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
   .loc-num {
     font-size: 12px;
@@ -346,8 +338,44 @@
     letter-spacing: 0.06em;
     font-feature-settings: 'tnum';
   }
+  .cat-count .dot {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: inline-block;
+  }
 
-  .loc-arrow {
+  .loc-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 4px var(--pad) 40px;
+  }
+
+  .fav-btn {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-mute);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: color 160ms ease, background 160ms ease, transform 120ms ease, border-color 160ms ease;
+    padding: 0;
+  }
+  .fav-btn:active { transform: scale(0.88); }
+  .fav-btn.on {
+    color: var(--accent);
+    background: var(--accent-glow);
+    border-color: transparent;
+  }
+  .fav-btn svg { width: 17px; height: 17px; stroke-width: 2; }
+  .fav-btn.on svg { fill: currentColor; }
+
+  .cat-arrow, .loc-arrow {
     width: 28px; height: 28px;
     color: var(--text-mute);
     display: inline-flex;
@@ -356,10 +384,78 @@
     flex-shrink: 0;
     transition: transform 160ms ease, color 160ms ease;
   }
-  .loc-arrow svg { width: 16px; height: 16px; stroke-width: 2; }
+  .cat-arrow svg, .loc-arrow svg { width: 16px; height: 16px; stroke-width: 2; }
+  .cat-card:active .cat-arrow,
   .loc-card:active .loc-arrow {
     color: var(--accent);
     transform: translateX(3px);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 56px 20px 40px;
+    color: var(--text-mute);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .empty-state .empty-ico {
+    width: 48px; height: 48px;
+    margin: 0 auto 14px;
+    border-radius: 14px;
+    background: var(--tile);
+    color: var(--text-mute);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .empty-state .empty-ico svg { width: 22px; height: 22px; stroke-width: 1.75; }
+
+  .loader {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    transition: opacity 200ms ease;
+  }
+  .loader.hide { opacity: 0; pointer-events: none; }
+  .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid var(--border-strong);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 700ms linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-state {
+    padding: 60px var(--pad) 40px;
+    text-align: center;
+    color: var(--text-dim);
+  }
+  .error-state h3 {
+    color: var(--text);
+    font-size: 18px;
+    margin: 12px 0 6px;
+    font-weight: 600;
+  }
+  .error-state p {
+    font-size: 14px;
+    margin: 0 0 18px;
+    color: var(--text-mute);
+  }
+  .error-state .retry {
+    padding: 11px 22px;
+    background: var(--accent);
+    color: #0a1410;
+    border: none;
+    border-radius: 11px;
+    font-weight: 600;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
   }
 
   body.tg { background: #1d1e33; }
@@ -369,100 +465,101 @@
   <div id="app">
 
     <!-- ============ HOME ============ -->
-    <section class="screen active" id="screen-home" data-screen-label="01 Home" data-comment-anchor="7c607437ef-section">
+    <section class="screen active" id="screen-home">
       <header class="header home">
-        <div class="topbar" data-comment-anchor="04ed75c965-div">
+        <div class="topbar">
           <div class="brand">
             <span class="brand-mark"><i data-lucide="map-pin"></i></span>
             <span class="brand-name">Lokatsiyalar</span>
           </div>
-          <span class="version">v 1.0</span>
+          <span class="version">v 1.1</span>
         </div>
-        <h1 data-comment-anchor="d1817f6ad0-h1">Kerakli joyni<br><span class="hl">toping</span></h1>
-        <div class="subtitle">Kategoriyani tanlang — Google Maps yo'nalishi avtomatik ochiladi</div>
+        <h1>Kerakli joyni<br><span class="hl">toping</span></h1>
+        <div class="subtitle">Kategoriyani tanlang yoki qidiruvdan foydalaning</div>
       </header>
 
-      <div class="section-label">
-        <span>Kategoriyalar</span>
+      <div class="search-wrap">
+        <span class="search-icon"><i data-lucide="search"></i></span>
+        <input class="search-input" id="home-search" type="text" inputmode="search" autocomplete="off" placeholder="Qidirish: joy yoki kategoriya">
+        <button class="search-clear" id="home-search-clear" aria-label="Tozalash"><i data-lucide="x"></i></button>
+      </div>
+
+      <div class="fav-quick" id="fav-quick">
+        <span class="cat-tile"><i data-lucide="star"></i></span>
+        <div class="cat-body">
+          <div class="cat-name">Sevimlilar</div>
+          <div class="cat-count"><span class="dot"></span><span id="fav-quick-count">0</span> ta joy</div>
+        </div>
+        <span class="cat-arrow"><i data-lucide="chevron-right"></i></span>
+      </div>
+
+      <div class="section-label" id="home-section-label">
+        <span id="home-section-title">Kategoriyalar</span>
         <span class="count" id="cat-total"></span>
       </div>
 
       <div class="cat-grid" id="cat-grid"></div>
+      <div class="loc-list" id="home-search-results" style="display:none"></div>
+      <div class="empty-state" id="home-empty" style="display:none">
+        <span class="empty-ico"><i data-lucide="search-x"></i></span>
+        <div>Hech narsa topilmadi</div>
+      </div>
     </section>
 
-    <!-- ============ CATEGORY ============ -->
-    <section class="screen enter-right" id="screen-category" data-screen-label="02 Category" aria-hidden="true">
+    <!-- ============ LIST (category or favorites) ============ -->
+    <section class="screen enter-right" id="screen-list" aria-hidden="true">
       <header class="header cat">
         <div class="topbar">
           <button class="back-btn" id="back-btn" aria-label="Orqaga">
             <i data-lucide="arrow-left"></i>
           </button>
-          <span class="ghost-btn" aria-hidden="true">
+          <span class="ghost-btn" id="list-header-icon" aria-hidden="true">
             <i data-lucide="map"></i>
           </span>
         </div>
-        <h1 id="cat-title">—</h1>
-        <div class="subtitle" id="cat-sub">— ta joy</div>
+        <h1 id="list-title">—</h1>
+        <div class="subtitle" id="list-sub">— ta joy</div>
       </header>
+
+      <div class="search-wrap">
+        <span class="search-icon"><i data-lucide="search"></i></span>
+        <input class="search-input" id="list-search" type="text" inputmode="search" autocomplete="off" placeholder="Joy nomini qidirish">
+        <button class="search-clear" id="list-search-clear" aria-label="Tozalash"><i data-lucide="x"></i></button>
+      </div>
 
       <div class="section-label">
         <span>Joylar</span>
       </div>
 
       <div class="loc-list" id="loc-list"></div>
+      <div class="empty-state" id="list-empty" style="display:none">
+        <span class="empty-ico"><i data-lucide="map-pin-off"></i></span>
+        <div id="list-empty-text">Hech narsa topilmadi</div>
+      </div>
+    </section>
+
+    <!-- ============ LOADER ============ -->
+    <div class="loader" id="loader">
+      <div class="spinner"></div>
+    </div>
+
+    <!-- ============ ERROR ============ -->
+    <section class="screen" id="screen-error" style="display:none">
+      <div class="error-state">
+        <span class="empty-ico" style="background:var(--tile);color:var(--text-mute);width:56px;height:56px;border-radius:16px;display:inline-flex;align-items:center;justify-content:center">
+          <i data-lucide="cloud-off"></i>
+        </span>
+        <h3>Yuklab bo'lmadi</h3>
+        <p id="error-text">Ma'lumotlarni yuklashda xatolik yuz berdi</p>
+        <button class="retry" id="retry-btn">Qayta urinish</button>
+      </div>
     </section>
 
   </div>
 
 <script>
   /* =========================================================
-     CATALOG DATA — edit here to add categories / locations
-     ========================================================= */
-  const catalog = {
-    mallar: {
-      name: "MALLAR",
-      icon: "shopping-bag",
-      locations: [
-        { name: "Al-Rashid MALL", url: "https://maps.app.goo.gl/u1xz96cdfVgGJf3u7?g_st=ic" },
-        { name: "Al-Noor MALL",   url: "https://maps.app.goo.gl/SNDKqcpLrCB7cvJP8?g_st=ic" },
-        { name: "Aliat MALL",     url: "https://maps.app.goo.gl/oXbV5psGtYGEgwt28?g_st=ic" },
-        { name: "Al-Manar MALL",  url: "https://maps.app.goo.gl/7Vqkybs4opGPxXjG8?g_st=ic" },
-      ],
-    },
-    fixed_price: {
-      name: "5.75 DO'KONLAR",
-      icon: "tag",
-      locations: [
-        { name: "AZHAR AL-BASEM",   url: "https://maps.app.goo.gl/ajWbRPj6ska2QRWu5?g_st=ic" },
-        { name: "WOW FIVE",         url: "https://maps.app.goo.gl/Z7C4GVa2d2C5BFC5A?g_st=ic" },
-        { name: "BARIQ AL-SHAMIL",  url: "https://maps.app.goo.gl/WzTcyf57k3kUmRw47?g_st=ic" },
-        { name: "FIVE RIYAL",       url: "https://maps.app.goo.gl/aJM1GFmtrywy5Yqq8?g_st=ic" },
-        { name: "BEST PRICES",      url: "https://maps.app.goo.gl/6rt1CioNA2Q9MYH48?g_st=ic" },
-      ],
-    },
-    stomatalogiyalar: {
-      name: "STOMATALOGIYALAR",
-      icon: "smile",
-      locations: [
-        { name: "Ariyd",         url: "https://maps.app.goo.gl/Yv5azU1d84p9dLzM8?g_st=ic" },
-        { name: "Safa Al-Madina", url: "https://maps.app.goo.gl/RvBwk76PPf5da7WQ8?g_st=ic" },
-        { name: "Al hijrah",     url: "https://maps.app.goo.gl/MtvAKSCsfJbRUGFd7?g_st=ic" },
-        { name: "Khalidiyya",    url: "https://maps.app.goo.gl/Crqc4vsMdhN9av8NA?g_st=ic" },
-      ],
-    },
-    // Add more categories here as needed:
-    // supermarkets: { name: "SUPERMARKETLAR", icon: "shopping-cart", locations: [...] },
-    // pharmacies:   { name: "DORIXONALAR",    icon: "cross",         locations: [...] },
-    // cafes:        { name: "KAFELAR",        icon: "coffee",        locations: [...] },
-    // restaurants:  { name: "RESTORANLAR",    icon: "utensils",      locations: [...] },
-    // electronics:  { name: "ELEKTRONIKA",    icon: "smartphone",    locations: [...] },
-    // banks:        { name: "BANKLAR",        icon: "landmark",      locations: [...] },
-    // gas_stations: { name: "ZAPRAVKALAR",    icon: "fuel",          locations: [...] },
-    // markets:      { name: "BOZORLAR",       icon: "store",         locations: [...] },
-  };
-
-  /* =========================================================
-     Telegram WebApp init (dark only)
+     Telegram WebApp
      ========================================================= */
   const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
   if (tg) {
@@ -486,129 +583,451 @@
   }
 
   /* =========================================================
-     Rendering
+     State
      ========================================================= */
-  const grid = document.getElementById('cat-grid');
-  const screenHome = document.getElementById('screen-home');
-  const screenCat  = document.getElementById('screen-category');
-  const backBtn    = document.getElementById('back-btn');
-  const catTitle   = document.getElementById('cat-title');
-  const catSub     = document.getElementById('cat-sub');
-  const catTotal   = document.getElementById('cat-total');
-  const locList    = document.getElementById('loc-list');
+  const FAVS_KEY = 'lkt_favs_v1';
 
-  function renderHome() {
-    grid.innerHTML = '';
-    const ids = Object.keys(catalog);
-    catTotal.textContent = String(ids.length).padStart(2, '0');
-    ids.forEach((id) => {
-      const cat = catalog[id];
-      const card = document.createElement('div');
-      card.className = 'cat-card';
-      card.dataset.id = id;
-      card.innerHTML = `
-        <span class="cat-tile"><i data-lucide="${cat.icon}"></i></span>
-        <div class="cat-body">
-          <div class="cat-name">${escapeHtml(cat.name)}</div>
-          <div class="cat-count"><span class="dot"></span>${cat.locations.length} ta joy</div>
-        </div>
-        <span class="cat-arrow"><i data-lucide="chevron-right"></i></span>
-      `;
-      card.addEventListener('click', () => {
-        haptic('light');
-        openCategory(id);
+  const state = {
+    catalog: null,
+    favs: loadFavs(),
+    homeQuery: '',
+    listQuery: '',
+  };
+
+  function loadFavs() {
+    try {
+      const raw = localStorage.getItem(FAVS_KEY);
+      return new Set(raw ? JSON.parse(raw) : []);
+    } catch (e) {
+      return new Set();
+    }
+  }
+  function saveFavs() {
+    try { localStorage.setItem(FAVS_KEY, JSON.stringify([...state.favs])); }
+    catch (e) {}
+  }
+  function favKey(loc) { return loc.url; }
+  function isFav(loc) { return state.favs.has(favKey(loc)); }
+  function toggleFav(loc) {
+    const k = favKey(loc);
+    if (state.favs.has(k)) state.favs.delete(k);
+    else state.favs.add(k);
+    saveFavs();
+  }
+  function getAllFavLocations() {
+    const out = [];
+    if (!state.catalog) return out;
+    for (const [catId, cat] of Object.entries(state.catalog)) {
+      cat.locations.forEach((loc) => {
+        if (isFav(loc)) out.push({ ...loc, _catId: catId, _icon: cat.icon, _catName: cat.name });
       });
-      grid.appendChild(card);
-    });
-    if (window.lucide) lucide.createIcons();
+    }
+    return out;
   }
 
-  function renderCategory(id) {
-    const cat = catalog[id];
-    if (!cat) return;
-    catTitle.textContent = cat.name;
-    catSub.textContent = `${cat.locations.length} ta joy`;
-    locList.innerHTML = '';
-    cat.locations.forEach((loc, i) => {
-      const card = document.createElement('div');
-      card.className = 'loc-card';
-      card.innerHTML = `
-        <span class="loc-tile"><i data-lucide="${cat.icon}"></i></span>
-        <div class="loc-body">
-          <div class="loc-name">${escapeHtml(loc.name)}</div>
-          <div class="loc-num">№ ${String(i + 1).padStart(2, '0')}</div>
-        </div>
-        <span class="loc-arrow"><i data-lucide="chevron-right"></i></span>
-      `;
-      card.addEventListener('click', () => {
-        haptic('light');
-        try { window.open(loc.url, '_blank'); } catch (e) {}
-      });
-      locList.appendChild(card);
-    });
-    if (window.lucide) lucide.createIcons();
+  /* =========================================================
+     Routing (hash-based)
+     Routes:
+       (empty)        -> home
+       #cat=<id>      -> list, category mode
+       #fav           -> list, favorites mode
+     ========================================================= */
+  function parseHash() {
+    const h = location.hash.replace(/^#/, '');
+    if (!h) return { screen: 'home' };
+    if (h === 'fav') return { screen: 'list', mode: 'fav' };
+    const params = new URLSearchParams(h);
+    const cat = params.get('cat');
+    if (cat && state.catalog && state.catalog[cat]) {
+      return { screen: 'list', mode: 'cat', id: cat };
+    }
+    return { screen: 'home' };
   }
 
+  function setRoute(view, { replace = false } = {}) {
+    const target =
+      view.screen === 'home' ? '' :
+      view.mode === 'fav'    ? '#fav' :
+                               `#cat=${encodeURIComponent(view.id)}`;
+    const url = location.pathname + location.search + target;
+    if (replace) history.replaceState(null, '', url);
+    else if ((location.hash || '') !== target) location.hash = target;
+  }
+
+  /* =========================================================
+     DOM refs
+     ========================================================= */
+  const screenHome  = document.getElementById('screen-home');
+  const screenList  = document.getElementById('screen-list');
+  const screenError = document.getElementById('screen-error');
+  const loaderEl    = document.getElementById('loader');
+
+  const grid             = document.getElementById('cat-grid');
+  const homeSearchResults = document.getElementById('home-search-results');
+  const homeEmpty        = document.getElementById('home-empty');
+  const homeSectionTitle = document.getElementById('home-section-title');
+  const catTotal         = document.getElementById('cat-total');
+  const homeSearchInput  = document.getElementById('home-search');
+  const homeSearchClear  = document.getElementById('home-search-clear');
+  const favQuick         = document.getElementById('fav-quick');
+  const favQuickCount    = document.getElementById('fav-quick-count');
+
+  const backBtn          = document.getElementById('back-btn');
+  const listTitle        = document.getElementById('list-title');
+  const listSub          = document.getElementById('list-sub');
+  const listHeaderIcon   = document.getElementById('list-header-icon');
+  const locList          = document.getElementById('loc-list');
+  const listEmpty        = document.getElementById('list-empty');
+  const listEmptyText    = document.getElementById('list-empty-text');
+  const listSearchInput  = document.getElementById('list-search');
+  const listSearchClear  = document.getElementById('list-search-clear');
+
+  /* =========================================================
+     Render
+     ========================================================= */
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, c => ({
       '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
     }[c]));
   }
+  function refreshIcons() { if (window.lucide) lucide.createIcons(); }
+  function matches(text, q) {
+    return text.toLowerCase().includes(q.toLowerCase());
+  }
+
+  function renderHome() {
+    const q = state.homeQuery.trim();
+    const ids = Object.keys(state.catalog);
+    catTotal.textContent = String(ids.length).padStart(2, '0');
+
+    // favorites quick link
+    const favCount = getAllFavLocations().length;
+    favQuickCount.textContent = String(favCount);
+    favQuick.classList.toggle('show', favCount > 0 && q === '');
+
+    homeSearchClear.classList.toggle('show', q.length > 0);
+
+    if (q === '') {
+      // Default: category list
+      homeSectionTitle.textContent = 'Kategoriyalar';
+      homeSearchResults.style.display = 'none';
+      homeEmpty.style.display = 'none';
+      grid.style.display = '';
+      grid.innerHTML = ids.map((id) => {
+        const cat = state.catalog[id];
+        return `
+          <div class="cat-card" data-id="${escapeHtml(id)}">
+            <span class="cat-tile"><i data-lucide="${escapeHtml(cat.icon)}"></i></span>
+            <div class="cat-body">
+              <div class="cat-name">${escapeHtml(cat.name)}</div>
+              <div class="cat-count"><span class="dot"></span>${cat.locations.length} ta joy</div>
+            </div>
+            <span class="cat-arrow"><i data-lucide="chevron-right"></i></span>
+          </div>`;
+      }).join('');
+      grid.querySelectorAll('.cat-card').forEach(card => {
+        card.addEventListener('click', () => {
+          haptic('light');
+          setRoute({ screen: 'list', mode: 'cat', id: card.dataset.id });
+        });
+      });
+    } else {
+      // Search across all locations
+      homeSectionTitle.textContent = 'Qidiruv natijalari';
+      grid.style.display = 'none';
+
+      const results = [];
+      for (const [catId, cat] of Object.entries(state.catalog)) {
+        cat.locations.forEach((loc) => {
+          if (matches(loc.name, q) || matches(cat.name, q)) {
+            results.push({ ...loc, _catId: catId, _icon: cat.icon, _catName: cat.name });
+          }
+        });
+      }
+      catTotal.textContent = String(results.length).padStart(2, '0');
+
+      if (results.length === 0) {
+        homeSearchResults.style.display = 'none';
+        homeEmpty.style.display = '';
+      } else {
+        homeEmpty.style.display = 'none';
+        homeSearchResults.style.display = '';
+        homeSearchResults.innerHTML = results.map((loc, i) =>
+          locCardHtml(loc, i, { showCat: true })
+        ).join('');
+        bindLocCards(homeSearchResults, results);
+      }
+    }
+    refreshIcons();
+  }
+
+  function locCardHtml(loc, i, { showCat = false } = {}) {
+    const fav = isFav(loc);
+    const sub = showCat
+      ? `<div class="loc-num">${escapeHtml(loc._catName || '')}</div>`
+      : `<div class="loc-num">№ ${String(i + 1).padStart(2, '0')}</div>`;
+    return `
+      <div class="loc-card" data-key="${escapeHtml(favKey(loc))}">
+        <span class="loc-tile"><i data-lucide="${escapeHtml(loc._icon || 'map-pin')}"></i></span>
+        <div class="loc-body">
+          <div class="loc-name">${escapeHtml(loc.name)}</div>
+          ${sub}
+        </div>
+        <button class="fav-btn ${fav ? 'on' : ''}" data-fav data-key="${escapeHtml(favKey(loc))}" aria-label="Sevimli">
+          <i data-lucide="star"></i>
+        </button>
+        <span class="loc-arrow"><i data-lucide="chevron-right"></i></span>
+      </div>`;
+  }
+
+  function bindLocCards(container, items) {
+    const byKey = new Map(items.map(it => [favKey(it), it]));
+    container.querySelectorAll('.loc-card').forEach(card => {
+      const key = card.dataset.key;
+      const loc = byKey.get(key);
+      if (!loc) return;
+
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('[data-fav]')) return;
+        haptic('light');
+        try {
+          if (tg && tg.openLink) tg.openLink(loc.url);
+          else window.open(loc.url, '_blank');
+        } catch (err) {
+          window.open(loc.url, '_blank');
+        }
+      });
+
+      const favBtn = card.querySelector('[data-fav]');
+      if (favBtn) {
+        favBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          haptic('select');
+          toggleFav(loc);
+          favBtn.classList.toggle('on', isFav(loc));
+        });
+      }
+    });
+  }
+
+  function renderList(view) {
+    let items, title, icon, emptyText;
+    if (view.mode === 'fav') {
+      items = getAllFavLocations();
+      title = 'Sevimlilar';
+      icon = 'star';
+      emptyText = "Sevimli joylaringiz yo'q";
+    } else {
+      const cat = state.catalog[view.id];
+      items = cat.locations.map(l => ({ ...l, _catId: view.id, _icon: cat.icon, _catName: cat.name }));
+      title = cat.name;
+      icon = cat.icon;
+      emptyText = 'Hech narsa topilmadi';
+    }
+
+    listTitle.textContent = title;
+    listSub.textContent = `${items.length} ta joy`;
+    listHeaderIcon.innerHTML = `<i data-lucide="${escapeHtml(icon)}"></i>`;
+
+    const q = state.listQuery.trim();
+    listSearchClear.classList.toggle('show', q.length > 0);
+    const filtered = q ? items.filter(loc => matches(loc.name, q)) : items;
+
+    if (filtered.length === 0) {
+      locList.innerHTML = '';
+      listEmpty.style.display = '';
+      listEmptyText.textContent = q ? 'Hech narsa topilmadi' : emptyText;
+    } else {
+      listEmpty.style.display = 'none';
+      locList.innerHTML = filtered.map((loc, i) =>
+        locCardHtml(loc, i, { showCat: view.mode === 'fav' })
+      ).join('');
+      bindLocCards(locList, filtered);
+    }
+    refreshIcons();
+  }
 
   /* =========================================================
-     Navigation w/ animation + Telegram BackButton
+     Navigation / transitions
      ========================================================= */
-  let currentScreen = 'home';
+  let currentView = { screen: 'home' };
 
-  function openCategory(id) {
-    renderCategory(id);
-    screenHome.classList.remove('active');
-    screenHome.classList.add('exit-left');
-    screenCat.classList.remove('enter-right', 'exit-right');
-    void screenCat.offsetWidth;
-    screenCat.classList.add('active');
-    screenCat.setAttribute('aria-hidden', 'false');
-    screenHome.setAttribute('aria-hidden', 'true');
-    currentScreen = 'category';
-    if (tg && tg.BackButton) {
-      try { tg.BackButton.show(); } catch (e) {}
+  function applyScreens(view, { animate = true } = {}) {
+    if (!animate) document.body.classList.add('no-anim');
+
+    if (view.screen === 'home') {
+      // list -> home: list slides right, home slides in
+      screenList.classList.remove('active');
+      screenList.classList.add('exit-right');
+      screenHome.classList.remove('exit-left', 'exit-right', 'enter-right');
+      void screenHome.offsetWidth;
+      screenHome.classList.add('active');
+      screenHome.setAttribute('aria-hidden', 'false');
+      screenList.setAttribute('aria-hidden', 'true');
+      // After transition, reset list to off-right for next entry
+      setTimeout(() => {
+        if (currentView.screen === 'home') {
+          screenList.classList.remove('exit-right');
+          screenList.classList.add('enter-right');
+        }
+      }, 320);
+    } else {
+      // home -> list (or list -> list)
+      screenHome.classList.remove('active');
+      screenHome.classList.add('exit-left');
+      screenList.classList.remove('enter-right', 'exit-right', 'exit-left');
+      void screenList.offsetWidth;
+      screenList.classList.add('active');
+      screenList.setAttribute('aria-hidden', 'false');
+      screenHome.setAttribute('aria-hidden', 'true');
+      screenList.scrollTop = 0;
     }
-    screenCat.scrollTop = 0;
+
+    // Telegram BackButton
+    if (tg && tg.BackButton) {
+      try {
+        if (view.screen === 'home') tg.BackButton.hide();
+        else tg.BackButton.show();
+      } catch (e) {}
+    }
+
+    if (!animate) {
+      requestAnimationFrame(() => document.body.classList.remove('no-anim'));
+    }
   }
 
-  function goHome() {
-    screenCat.classList.remove('active');
-    screenCat.classList.add('exit-right');
-    screenHome.classList.remove('exit-left');
-    void screenHome.offsetWidth;
-    screenHome.classList.add('active');
-    screenHome.setAttribute('aria-hidden', 'false');
-    screenCat.setAttribute('aria-hidden', 'true');
-    setTimeout(() => {
-      screenCat.classList.remove('exit-right');
-      screenCat.classList.add('enter-right');
-    }, 320);
-    currentScreen = 'home';
-    if (tg && tg.BackButton) {
-      try { tg.BackButton.hide(); } catch (e) {}
+  function applyView(view, opts = {}) {
+    currentView = view;
+    if (view.screen === 'home') {
+      renderHome();
+    } else {
+      // reset list search when entering a new list
+      if (currentListKey() !== viewKey(view)) {
+        state.listQuery = '';
+        listSearchInput.value = '';
+      }
+      renderList(view);
     }
+    applyScreens(view, opts);
   }
 
-  backBtn.addEventListener('click', () => {
-    haptic('light');
-    goHome();
+  function viewKey(view) {
+    if (view.screen === 'home') return 'home';
+    if (view.mode === 'fav') return 'list:fav';
+    return `list:cat:${view.id}`;
+  }
+  let _lastListKey = null;
+  function currentListKey() { return _lastListKey; }
+  function commitListKey(view) {
+    if (view.screen === 'list') _lastListKey = viewKey(view);
+  }
+
+  /* =========================================================
+     Boot
+     ========================================================= */
+  async function loadCatalog() {
+    const res = await fetch('catalog.json', { cache: 'no-cache' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (!data || typeof data !== 'object') throw new Error('Invalid catalog');
+    return data;
+  }
+
+  function showError(msg) {
+    document.getElementById('error-text').textContent = msg || "Ma'lumotlarni yuklashda xatolik";
+    screenHome.style.display = 'none';
+    screenList.style.display = 'none';
+    screenError.style.display = '';
+    loaderEl.classList.add('hide');
+    refreshIcons();
+  }
+
+  function hideLoader() {
+    loaderEl.classList.add('hide');
+    setTimeout(() => { loaderEl.style.display = 'none'; }, 220);
+  }
+
+  async function boot() {
+    try {
+      state.catalog = await loadCatalog();
+    } catch (e) {
+      showError(e && e.message ? `Xatolik: ${e.message}` : "Yuklab bo'lmadi");
+      return;
+    }
+
+    // Initial view from hash (normalize invalid hashes)
+    const initial = parseHash();
+    setRoute(initial, { replace: true });
+    applyView(initial, { animate: false });
+    commitListKey(initial);
+
+    // Listen to hash changes
+    window.addEventListener('hashchange', () => {
+      const v = parseHash();
+      applyView(v);
+      commitListKey(v);
+    });
+
+    // Search wiring
+    homeSearchInput.addEventListener('input', () => {
+      state.homeQuery = homeSearchInput.value;
+      renderHome();
+    });
+    homeSearchClear.addEventListener('click', () => {
+      homeSearchInput.value = '';
+      state.homeQuery = '';
+      renderHome();
+      homeSearchInput.focus();
+    });
+    listSearchInput.addEventListener('input', () => {
+      state.listQuery = listSearchInput.value;
+      renderList(currentView);
+    });
+    listSearchClear.addEventListener('click', () => {
+      listSearchInput.value = '';
+      state.listQuery = '';
+      renderList(currentView);
+      listSearchInput.focus();
+    });
+
+    // Favorites quick link
+    favQuick.addEventListener('click', () => {
+      haptic('light');
+      setRoute({ screen: 'list', mode: 'fav' });
+    });
+
+    // Back button
+    backBtn.addEventListener('click', () => {
+      haptic('light');
+      if (history.length > 1) history.back();
+      else setRoute({ screen: 'home' });
+    });
+
+    if (tg && tg.BackButton) {
+      try {
+        tg.BackButton.onClick(() => {
+          if (currentView.screen !== 'home') {
+            if (history.length > 1) history.back();
+            else setRoute({ screen: 'home' });
+          }
+        });
+      } catch (e) {}
+    }
+
+    hideLoader();
+  }
+
+  document.getElementById('retry-btn').addEventListener('click', () => {
+    screenError.style.display = 'none';
+    screenHome.style.display = '';
+    screenList.style.display = '';
+    loaderEl.style.display = '';
+    loaderEl.classList.remove('hide');
+    boot();
   });
 
-  if (tg && tg.BackButton) {
-    try {
-      tg.BackButton.onClick(() => {
-        if (currentScreen === 'category') goHome();
-      });
-    } catch (e) {}
-  }
-
-  // Init
-  renderHome();
+  refreshIcons();
+  boot();
 </script>
 
 
