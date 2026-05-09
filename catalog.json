@@ -2,6 +2,7 @@
   "mallar": {
     "name": "MALL LAR",
     "icon": "shopping-bag",
+    "count_label": "4 ta mall",
     "locations": [
       { "name": "MALL LAR", "url": "https://t.me/lokatsiyamed/50" }
     ]
@@ -17,6 +18,7 @@
   "riyal_5": {
     "name": "5 RIYALLIK DO'KONLAR",
     "icon": "tag",
+    "count_label": "5 ta do'kon",
     "locations": [
       { "name": "5 RIYALLIK DO'KONLAR", "url": "https://t.me/lokatsiyamed/307" }
     ]
@@ -36,6 +38,7 @@
   "gaz_balonlar": {
     "name": "GAZ BALONLAR",
     "icon": "flame",
+    "count_label": "8 ta joy",
     "locations": [
       { "name": "GAZ BALONLAR", "url": "https://t.me/lokatsiyamed/75" }
     ]
@@ -43,6 +46,7 @@
   "tish_doktorlar": {
     "name": "TISH DOKTORLAR",
     "icon": "smile",
+    "count_label": "4 ta klinika",
     "locations": [
       { "name": "TISH DOKTORLAR", "url": "https://t.me/lokatsiyamed/166" }
     ]
@@ -60,6 +64,7 @@
   "aeroportlar": {
     "name": "AEROPORTLAR",
     "icon": "plane",
+    "count_label": "Madina va Jidda",
     "locations": [
       { "name": "Jidda - 3 ta aeroport", "url": "https://t.me/lokatsiyamed/182" },
       { "name": "Madina aeroport",       "url": "https://t.me/lokatsiyamed/210" }

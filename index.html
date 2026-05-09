@@ -715,12 +715,13 @@
       grid.style.display = '';
       grid.innerHTML = ids.map((id) => {
         const cat = state.catalog[id];
+        const countText = cat.count_label || `${cat.locations.length} ta joy`;
         return `
           <div class="cat-card" data-id="${escapeHtml(id)}">
             <span class="cat-tile"><i data-lucide="${escapeHtml(cat.icon)}"></i></span>
             <div class="cat-body">
               <div class="cat-name">${escapeHtml(cat.name)}</div>
-              <div class="cat-count"><span class="dot"></span>${cat.locations.length} ta joy</div>
+              <div class="cat-count"><span class="dot"></span>${escapeHtml(countText)}</div>
             </div>
             <span class="cat-arrow"><i data-lucide="chevron-right"></i></span>
           </div>`;
@@ -830,22 +831,24 @@
   }
 
   function renderList(view) {
-    let items, title, icon, emptyText;
+    let items, title, icon, emptyText, subText;
     if (view.mode === 'fav') {
       items = getAllFavLocations();
       title = 'Sevimlilar';
       icon = 'star';
       emptyText = "Sevimli joylaringiz yo'q";
+      subText = `${items.length} ta joy`;
     } else {
       const cat = state.catalog[view.id];
       items = cat.locations.map(l => ({ ...l, _catId: view.id, _icon: cat.icon, _catName: cat.name }));
       title = cat.name;
       icon = cat.icon;
       emptyText = 'Hech narsa topilmadi';
+      subText = cat.count_label || `${items.length} ta joy`;
     }
 
     listTitle.textContent = title;
-    listSub.textContent = `${items.length} ta joy`;
+    listSub.textContent = subText;
     listHeaderIcon.innerHTML = `<i data-lucide="${escapeHtml(icon)}"></i>`;
 
     const q = state.listQuery.trim();
