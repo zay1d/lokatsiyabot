@@ -23,6 +23,34 @@
       { "name": "5 RIYALLIK DO'KONLAR", "url": "https://t.me/lokatsiyamed/307" }
     ]
   },
+  "non_mahsulotlari": {
+    "name": "NON MAHSULOTLARI",
+    "icon": "croissant",
+    "locations": [
+      { "name": "Al-Hattab Bakery", "url": "https://t.me/lokatsiyamed/76"  },
+      { "name": "Eleve Bakery",     "url": "https://t.me/lokatsiyamed/295" }
+    ]
+  },
+  "shirinliklar": {
+    "name": "SHIRINLIKLAR",
+    "icon": "cake-slice",
+    "locations": [
+      { "name": "Bardisi shirinliklari", "url": "https://t.me/lokatsiyamed/32"  },
+      { "name": "Farowlaty",             "url": "https://t.me/lokatsiyamed/33"  },
+      { "name": "Hamide shirinliklari",  "url": "https://t.me/lokatsiyamed/40"  },
+      { "name": "Leeta shirinliklari",   "url": "https://t.me/lokatsiyamed/122" }
+    ]
+  },
+  "ozbek_oshxonalar": {
+    "name": "O'ZBEK OSHXONALAR",
+    "icon": "utensils",
+    "count_label": "3 ta oshxona",
+    "locations": [
+      { "name": "Doctor Ali",                "url": "https://t.me/lokatsiyamed/60"  },
+      { "name": "Top 5 ta O'zbek oshxona",   "url": "https://t.me/lokatsiyamed/259" },
+      { "name": "Lag'monchilar",             "url": "https://t.me/lokatsiyamed/384" }
+    ]
+  },
   "uy_jixozlari": {
     "name": "UY JIXOZLARI",
     "icon": "sofa",
@@ -43,12 +71,33 @@
       { "name": "GAZ BALONLAR", "url": "https://t.me/lokatsiyamed/75" }
     ]
   },
+  "shifoxonalar": {
+    "name": "SHIFOXONALAR",
+    "icon": "stethoscope",
+    "count_label": "4 ta klinika",
+    "locations": [
+      { "name": "Uhud shifoxonasi",       "url": "https://t.me/lokatsiyamed/450" },
+      { "name": "King Fahd",              "url": "https://t.me/lokatsiyamed/335" },
+      { "name": "Analiz tahlil",          "url": "https://t.me/lokatsiyamed/343" },
+      { "name": "Ayollar uchun doktorlar", "url": "https://t.me/lokatsiyamed/51"  }
+    ]
+  },
   "tish_doktorlar": {
     "name": "TISH DOKTORLAR",
     "icon": "smile",
     "count_label": "4 ta klinika",
     "locations": [
       { "name": "TISH DOKTORLAR", "url": "https://t.me/lokatsiyamed/166" }
+    ]
+  },
+  "trenajor_zallar": {
+    "name": "TRENAJOR ZALLAR",
+    "icon": "dumbbell",
+    "count_label": "3 ta zal",
+    "locations": [
+      { "name": "Madina universiteti zali", "url": "https://t.me/lokatsiyamed/443" },
+      { "name": "Lifestyle",                "url": "https://t.me/lokatsiyamed/263" },
+      { "name": "Fitness King",             "url": "https://t.me/lokatsiyamed/125" }
     ]
   },
   "hurmo_boglari": {
