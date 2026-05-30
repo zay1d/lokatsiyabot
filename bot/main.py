@@ -47,6 +47,7 @@ ADMIN_CHAT_ID = int(os.environ["ADMIN_CHAT_ID"])
 PORT = int(os.environ.get("PORT", "8080"))
 ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "*")
 STATE_FILE = Path(os.environ.get("STATE_FILE", "state.json"))
+FAVORITES_FILE = Path(os.environ.get("FAVORITES_FILE", "favorites.json"))
 
 bot = Bot(BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
@@ -70,6 +71,37 @@ def save_state(state: dict[int, int]) -> None:
 
 
 admin_msg_to_user: dict[int, int] = load_state()
+
+
+def load_favorites() -> dict[int, set[str]]:
+    """Map user_id -> set of favorited URLs."""
+    if FAVORITES_FILE.exists():
+        try:
+            data = json.loads(FAVORITES_FILE.read_text())
+            return {int(uid): set(urls) for uid, urls in data.items()}
+        except Exception:
+            log.exception("Failed to load favorites, starting fresh")
+    return {}
+
+
+def save_favorites(favs: dict[int, set[str]]) -> None:
+    try:
+        data = {str(uid): sorted(urls) for uid, urls in favs.items() if urls}
+        FAVORITES_FILE.write_text(json.dumps(data, ensure_ascii=False))
+    except Exception:
+        log.exception("Failed to save favorites")
+
+
+favorites: dict[int, set[str]] = load_favorites()
+
+
+def extract_user_id(parsed: dict) -> int | None:
+    try:
+        user = json.loads(parsed.get("user", "{}"))
+        uid = user.get("id")
+        return uid if isinstance(uid, int) else None
+    except Exception:
+        return None
 
 
 def verify_init_data(init_data: str, bot_token: str) -> dict | None:
@@ -162,6 +194,50 @@ async def handle_health(request: web.Request) -> web.Response:
     return web.json_response({"ok": True, "service": "lokatsiya-contact"})
 
 
+async def handle_favs_list(request: web.Request) -> web.Response:
+    try:
+        data = await request.json()
+    except Exception:
+        return web.json_response({"error": "invalid json"}, status=400)
+
+    parsed = verify_init_data(data.get("initData", ""), BOT_TOKEN)
+    if not parsed:
+        return web.json_response({"error": "invalid initData"}, status=403)
+    uid = extract_user_id(parsed)
+    if not uid:
+        return web.json_response({"error": "no user"}, status=400)
+
+    return web.json_response({"favorites": sorted(favorites.get(uid, set()))})
+
+
+async def handle_favs_toggle(request: web.Request) -> web.Response:
+    try:
+        data = await request.json()
+    except Exception:
+        return web.json_response({"error": "invalid json"}, status=400)
+
+    parsed = verify_init_data(data.get("initData", ""), BOT_TOKEN)
+    if not parsed:
+        return web.json_response({"error": "invalid initData"}, status=403)
+    uid = extract_user_id(parsed)
+    if not uid:
+        return web.json_response({"error": "no user"}, status=400)
+
+    url = (data.get("url") or "").strip()
+    if not url or len(url) > 500:
+        return web.json_response({"error": "bad url"}, status=400)
+
+    user_set = favorites.setdefault(uid, set())
+    if url in user_set:
+        user_set.remove(url)
+        action = "removed"
+    else:
+        user_set.add(url)
+        action = "added"
+    save_favorites(favorites)
+    return web.json_response({"ok": True, "action": action, "count": len(user_set)})
+
+
 def html_escape(s: str) -> str:
     return (
         s.replace("&", "&amp;")
@@ -210,6 +286,8 @@ async def admin_reply(msg: Message) -> None:
 async def main() -> None:
     app = web.Application(middlewares=[cors_middleware])
     app.router.add_post("/api/contact", handle_contact)
+    app.router.add_post("/api/favorites/list", handle_favs_list)
+    app.router.add_post("/api/favorites/toggle", handle_favs_toggle)
     app.router.add_get("/health", handle_health)
 
     runner = web.AppRunner(app)

@@ -750,6 +750,42 @@
     if (state.favs.has(k)) state.favs.delete(k);
     else state.favs.add(k);
     saveFavs();
+    syncFavToggleToServer(k);
+  }
+
+  function apiAvailable() {
+    return !!(CONFIG.API_URL && tg && tg.initData);
+  }
+
+  async function syncFavsFromServer() {
+    if (!apiAvailable()) return;
+    try {
+      const res = await fetch(`${CONFIG.API_URL.replace(/\/$/, '')}/api/favorites/list`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData: tg.initData }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const serverSet = new Set(data.favorites || []);
+      // Server is source of truth; replace local
+      state.favs = serverSet;
+      saveFavs();
+      // Re-render relevant screens to reflect server state
+      if (currentView.screen === 'home') renderHome();
+      else if (currentView.screen === 'list' && currentView.mode === 'fav') renderList(currentView);
+    } catch (e) { /* silent: stay on local cache */ }
+  }
+
+  async function syncFavToggleToServer(url) {
+    if (!apiAvailable()) return;
+    try {
+      await fetch(`${CONFIG.API_URL.replace(/\/$/, '')}/api/favorites/toggle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData: tg.initData, url }),
+      });
+    } catch (e) { /* silent: optimistic UI already updated, will reconcile on next load */ }
   }
   function getAllFavLocations() {
     const out = [];
@@ -1195,6 +1231,9 @@
     setRoute(initial, { replace: true });
     applyView(initial, { animate: false });
     commitListKey(initial);
+
+    // Sync favourites from server in the background (no UI block)
+    syncFavsFromServer();
 
     // Listen to hash changes
     window.addEventListener('hashchange', () => {

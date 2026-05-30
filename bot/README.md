@@ -36,6 +36,7 @@ pip install -r requirements.txt
 | `PORT` | нет | HTTP-порт (по умолчанию `8080`) |
 | `ALLOWED_ORIGIN` | нет | CORS origin (по умолчанию `*`; для прода поставь `https://zay1d.github.io`) |
 | `STATE_FILE` | нет | Файл для сохранения мапы admin_msg → user_id (по умолчанию `state.json`) |
+| `FAVORITES_FILE` | нет | Файл для хранения избранного юзеров (по умолчанию `favorites.json`) |
 
 Пример запуска вручную:
 
