@@ -26,14 +26,21 @@ import hmac
 import json
 import logging
 import os
+import re
+import shutil
+import time
 from pathlib import Path
 from urllib.parse import parse_qsl
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram.filters import Command, StateFilter
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.types import CallbackQuery, Message
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiohttp import web
 
 logging.basicConfig(
@@ -48,9 +55,11 @@ PORT = int(os.environ.get("PORT", "8080"))
 ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "*")
 STATE_FILE = Path(os.environ.get("STATE_FILE", "state.json"))
 FAVORITES_FILE = Path(os.environ.get("FAVORITES_FILE", "favorites.json"))
+CATALOG_FILE = Path(os.environ.get("CATALOG_FILE", "catalog.json"))
+SEED_CATALOG = Path(os.environ.get("SEED_CATALOG", "../catalog.json"))
 
 bot = Bot(BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-dp = Dispatcher()
+dp = Dispatcher(storage=MemoryStorage())
 
 
 def load_state() -> dict[int, int]:
@@ -93,6 +102,50 @@ def save_favorites(favs: dict[int, set[str]]) -> None:
 
 
 favorites: dict[int, set[str]] = load_favorites()
+
+
+def init_catalog_file() -> None:
+    """Seed CATALOG_FILE from SEED_CATALOG on first run, if it doesn't exist."""
+    if CATALOG_FILE.exists():
+        return
+    CATALOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    if SEED_CATALOG.exists():
+        shutil.copy(SEED_CATALOG, CATALOG_FILE)
+        log.info("Seeded catalog from %s", SEED_CATALOG)
+    else:
+        CATALOG_FILE.write_text("{}", encoding="utf-8")
+        log.warning("No seed found at %s, starting with empty catalog", SEED_CATALOG)
+
+
+def load_catalog() -> dict:
+    if CATALOG_FILE.exists():
+        try:
+            return json.loads(CATALOG_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            log.exception("Failed to load catalog")
+    return {}
+
+
+def save_catalog(cat: dict) -> None:
+    try:
+        CATALOG_FILE.write_text(json.dumps(cat, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:
+        log.exception("Failed to save catalog")
+
+
+init_catalog_file()
+catalog_data: dict = load_catalog()
+
+
+def slugify(name: str) -> str:
+    s = name.lower().replace("'", "").replace("`", "").replace("’", "")
+    s = re.sub(r"[^a-z0-9]+", "_", s).strip("_")
+    return s or f"cat_{int(time.time())}"
+
+
+def is_admin(msg_or_cb) -> bool:
+    chat_id = msg_or_cb.chat.id if hasattr(msg_or_cb, "chat") else msg_or_cb.message.chat.id
+    return chat_id == ADMIN_CHAT_ID
 
 
 def extract_user_id(parsed: dict) -> int | None:
@@ -194,6 +247,12 @@ async def handle_health(request: web.Request) -> web.Response:
     return web.json_response({"ok": True, "service": "lokatsiya-contact"})
 
 
+async def handle_catalog(request: web.Request) -> web.Response:
+    resp = web.json_response(catalog_data)
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return resp
+
+
 async def handle_favs_list(request: web.Request) -> web.Response:
     try:
         data = await request.json()
@@ -248,15 +307,311 @@ def html_escape(s: str) -> str:
 
 # -------------------- Bot handlers --------------------
 
+class AddLocation(StatesGroup):
+    waiting_category = State()
+    waiting_name = State()
+    waiting_url = State()
+
+
+class AddCategory(StatesGroup):
+    waiting_name = State()
+    waiting_icon = State()
+
+
+class DelLocation(StatesGroup):
+    waiting_category = State()
+    waiting_location = State()
+
+
+ADMIN_HELP = (
+    "<b>Admin buyruqlari:</b>\n\n"
+    "/add — yangi joy qo'shish\n"
+    "/del — joyni o'chirish\n"
+    "/cat_add — yangi kategoriya qo'shish\n"
+    "/list — barcha kategoriya va joylar\n"
+    "/cancel — joriy jarayonni bekor qilish\n"
+    "/help — shu ro'yxat"
+)
+
+
 @dp.message(Command("start"))
 async def cmd_start(msg: Message) -> None:
-    await msg.answer(
-        "Salom! Bu bot — Lokatsiyalar mini-appiga aloqa kanali.\n"
-        "Savol yoki taklif uchun mini-appda 'Biz bilan bog'laning' tugmasidan foydalaning."
+    if is_admin(msg):
+        await msg.answer("Salom, admin!\n\n" + ADMIN_HELP)
+    else:
+        await msg.answer(
+            "Salom! Bu bot — Lokatsiyalar mini-appiga aloqa kanali.\n"
+            "Savol yoki taklif uchun mini-appda 'Biz bilan bog'laning' tugmasidan foydalaning."
+        )
+
+
+@dp.message(Command("help"))
+async def cmd_help(msg: Message) -> None:
+    if not is_admin(msg):
+        return
+    await msg.answer(ADMIN_HELP)
+
+
+@dp.message(Command("cancel"))
+async def cmd_cancel(msg: Message, state: FSMContext) -> None:
+    if not is_admin(msg):
+        return
+    cur = await state.get_state()
+    await state.clear()
+    if cur:
+        await msg.answer("❌ Bekor qilindi")
+    else:
+        await msg.answer("Faol jarayon yo'q")
+
+
+@dp.message(Command("list"))
+async def cmd_list(msg: Message) -> None:
+    if not is_admin(msg):
+        return
+    if not catalog_data:
+        await msg.answer("Catalog bo'sh")
+        return
+    lines = []
+    for cat_id, cat in catalog_data.items():
+        cl = cat.get("count_label") or f"{len(cat.get('locations', []))} ta"
+        lines.append(
+            f"\n📁 <b>{html_escape(cat['name'])}</b> · {html_escape(cl)} "
+            f"· <code>{html_escape(cat_id)}</code>"
+        )
+        for i, loc in enumerate(cat.get("locations", []), 1):
+            lines.append(f"   {i}. {html_escape(loc['name'])}")
+    text = "\n".join(lines).strip() or "Catalog bo'sh"
+    if len(text) > 4000:
+        text = text[:3900] + "\n\n... (ro'yxat juda uzun)"
+    await msg.answer(text)
+
+
+# ----- /add flow -----
+
+@dp.message(Command("add"))
+async def cmd_add(msg: Message, state: FSMContext) -> None:
+    if not is_admin(msg):
+        return
+    await state.clear()
+    if not catalog_data:
+        await msg.answer("Catalog bo'sh. Avval /cat_add bilan kategoriya qo'shing.")
+        return
+    builder = InlineKeyboardBuilder()
+    for cat_id, cat in catalog_data.items():
+        builder.button(text=cat["name"], callback_data=f"add_cat:{cat_id}")
+    builder.adjust(1)
+    await msg.answer("Qaysi kategoriyaga qo'shasiz?", reply_markup=builder.as_markup())
+    await state.set_state(AddLocation.waiting_category)
+
+
+@dp.callback_query(F.data.startswith("add_cat:"), AddLocation.waiting_category)
+async def add_cat_chosen(cb: CallbackQuery, state: FSMContext) -> None:
+    if not is_admin(cb):
+        await cb.answer()
+        return
+    cat_id = cb.data.split(":", 1)[1]
+    if cat_id not in catalog_data:
+        await cb.answer("Kategoriya yo'q", show_alert=True)
+        return
+    await state.update_data(cat_id=cat_id)
+    await cb.message.edit_text(
+        f"📁 {html_escape(catalog_data[cat_id]['name'])}\n\nJoy nomini yuboring:"
     )
+    await state.set_state(AddLocation.waiting_name)
+    await cb.answer()
 
 
-@dp.message(F.reply_to_message)
+@dp.message(AddLocation.waiting_name)
+async def add_name_received(msg: Message, state: FSMContext) -> None:
+    if not is_admin(msg):
+        return
+    name = (msg.text or "").strip()
+    if not name or len(name) > 100:
+        await msg.answer("Nom 1-100 belgi bo'lishi kerak. Qaytadan:")
+        return
+    await state.update_data(name=name)
+    await msg.answer(
+        f"📍 {html_escape(name)}\n\n"
+        "Endi havolani yuboring (https://t.me/... yoki https://maps...):"
+    )
+    await state.set_state(AddLocation.waiting_url)
+
+
+@dp.message(AddLocation.waiting_url)
+async def add_url_received(msg: Message, state: FSMContext) -> None:
+    if not is_admin(msg):
+        return
+    url = (msg.text or "").strip()
+    if not re.match(r"^https?://", url) or len(url) > 500:
+        await msg.answer("Havola noto'g'ri. https:// bilan boshlanishi va 500 belgidan kam bo'lishi kerak:")
+        return
+    data = await state.get_data()
+    cat_id = data.get("cat_id")
+    name = data.get("name")
+    if not cat_id or cat_id not in catalog_data or not name:
+        await msg.answer("Jarayon buzildi, qaytadan /add")
+        await state.clear()
+        return
+    catalog_data[cat_id].setdefault("locations", []).append({"name": name, "url": url})
+    save_catalog(catalog_data)
+    total = len(catalog_data[cat_id]["locations"])
+    await msg.answer(
+        "✅ <b>Qo'shildi</b>\n\n"
+        f"📁 {html_escape(catalog_data[cat_id]['name'])}\n"
+        f"📍 {html_escape(name)}\n"
+        f"🔗 {html_escape(url)}\n\n"
+        f"Endi kategoriyada {total} ta joy"
+    )
+    await state.clear()
+
+
+# ----- /cat_add flow -----
+
+@dp.message(Command("cat_add"))
+async def cmd_cat_add(msg: Message, state: FSMContext) -> None:
+    if not is_admin(msg):
+        return
+    await state.clear()
+    await msg.answer("Yangi kategoriya nomi (masalan: <code>KAFE</code>):")
+    await state.set_state(AddCategory.waiting_name)
+
+
+@dp.message(AddCategory.waiting_name)
+async def cat_name_received(msg: Message, state: FSMContext) -> None:
+    if not is_admin(msg):
+        return
+    name = (msg.text or "").strip()
+    if not name or len(name) > 50:
+        await msg.answer("Nom 1-50 belgi. Qaytadan:")
+        return
+    await state.update_data(name=name)
+    await msg.answer(
+        f"📁 {html_escape(name)}\n\n"
+        "Ikona nomini yuboring (lucide.dev/icons).\n\n"
+        "Misollar: <code>coffee</code>, <code>utensils</code>, <code>shopping-bag</code>, "
+        "<code>store</code>, <code>flame</code>, <code>smile</code>, <code>trees</code>, "
+        "<code>plane</code>, <code>tag</code>, <code>sofa</code>, <code>dumbbell</code>, "
+        "<code>croissant</code>, <code>cake-slice</code>, <code>stethoscope</code>"
+    )
+    await state.set_state(AddCategory.waiting_icon)
+
+
+@dp.message(AddCategory.waiting_icon)
+async def cat_icon_received(msg: Message, state: FSMContext) -> None:
+    if not is_admin(msg):
+        return
+    icon = (msg.text or "").strip().lower()
+    if not re.match(r"^[a-z0-9-]{1,40}$", icon):
+        await msg.answer("Ikona nomi noto'g'ri (lotin harf, raqam, defis). Qaytadan:")
+        return
+    data = await state.get_data()
+    name = data.get("name")
+    if not name:
+        await msg.answer("Jarayon buzildi, qaytadan /cat_add")
+        await state.clear()
+        return
+    base = slugify(name)
+    cat_id = base
+    suffix = 2
+    while cat_id in catalog_data:
+        cat_id = f"{base}_{suffix}"
+        suffix += 1
+    catalog_data[cat_id] = {"name": name, "icon": icon, "locations": []}
+    save_catalog(catalog_data)
+    await msg.answer(
+        "✅ <b>Kategoriya qo'shildi</b>\n\n"
+        f"📁 {html_escape(name)}\n"
+        f"🎨 {html_escape(icon)}\n"
+        f"ID: <code>{html_escape(cat_id)}</code>\n\n"
+        "Endi /add bilan joy qo'shing."
+    )
+    await state.clear()
+
+
+# ----- /del flow -----
+
+@dp.message(Command("del"))
+async def cmd_del(msg: Message, state: FSMContext) -> None:
+    if not is_admin(msg):
+        return
+    await state.clear()
+    if not catalog_data:
+        await msg.answer("Catalog bo'sh")
+        return
+    builder = InlineKeyboardBuilder()
+    for cat_id, cat in catalog_data.items():
+        count = len(cat.get("locations", []))
+        builder.button(text=f"{cat['name']} ({count})", callback_data=f"del_cat:{cat_id}")
+    builder.adjust(1)
+    await msg.answer("Qaysi kategoriyadan o'chiramiz?", reply_markup=builder.as_markup())
+    await state.set_state(DelLocation.waiting_category)
+
+
+@dp.callback_query(F.data.startswith("del_cat:"), DelLocation.waiting_category)
+async def del_cat_chosen(cb: CallbackQuery, state: FSMContext) -> None:
+    if not is_admin(cb):
+        await cb.answer()
+        return
+    cat_id = cb.data.split(":", 1)[1]
+    if cat_id not in catalog_data:
+        await cb.answer("Yo'q", show_alert=True)
+        return
+    cat = catalog_data[cat_id]
+    locs = cat.get("locations", [])
+    if not locs:
+        await cb.message.edit_text(f"📁 {html_escape(cat['name'])} — bo'sh")
+        await state.clear()
+        await cb.answer()
+        return
+    builder = InlineKeyboardBuilder()
+    for i, loc in enumerate(locs):
+        nm = loc["name"]
+        if len(nm) > 32:
+            nm = nm[:29] + "..."
+        builder.button(text=f"{i+1}. {nm}", callback_data=f"del_loc:{cat_id}:{i}")
+    builder.adjust(1)
+    await cb.message.edit_text(
+        f"📁 {html_escape(cat['name'])}\n\nQaysi joyni o'chirasiz?",
+        reply_markup=builder.as_markup()
+    )
+    await state.set_state(DelLocation.waiting_location)
+    await cb.answer()
+
+
+@dp.callback_query(F.data.startswith("del_loc:"), DelLocation.waiting_location)
+async def del_loc_chosen(cb: CallbackQuery, state: FSMContext) -> None:
+    if not is_admin(cb):
+        await cb.answer()
+        return
+    parts = cb.data.split(":")
+    if len(parts) != 3:
+        await cb.answer("Bad data", show_alert=True)
+        return
+    cat_id = parts[1]
+    try:
+        idx = int(parts[2])
+    except ValueError:
+        await cb.answer("Bad index", show_alert=True)
+        return
+    if cat_id not in catalog_data:
+        await cb.answer("Kategoriya yo'q", show_alert=True)
+        return
+    locs = catalog_data[cat_id].get("locations", [])
+    if idx < 0 or idx >= len(locs):
+        await cb.answer("Indeks topilmadi", show_alert=True)
+        return
+    removed = locs.pop(idx)
+    save_catalog(catalog_data)
+    await cb.message.edit_text(
+        "✅ <b>O'chirildi</b>\n\n"
+        f"📁 {html_escape(catalog_data[cat_id]['name'])}\n"
+        f"📍 {html_escape(removed['name'])}"
+    )
+    await state.clear()
+    await cb.answer()
+
+
+@dp.message(F.reply_to_message, StateFilter(None))
 async def admin_reply(msg: Message) -> None:
     """When admin replies to a forwarded message in the admin chat, relay to the original user."""
     if msg.chat.id != ADMIN_CHAT_ID:
@@ -288,6 +643,7 @@ async def main() -> None:
     app.router.add_post("/api/contact", handle_contact)
     app.router.add_post("/api/favorites/list", handle_favs_list)
     app.router.add_post("/api/favorites/toggle", handle_favs_toggle)
+    app.router.add_get("/api/catalog", handle_catalog)
     app.router.add_get("/health", handle_health)
 
     runner = web.AppRunner(app)

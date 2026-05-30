@@ -1225,6 +1225,17 @@
      Boot
      ========================================================= */
   async function loadCatalog() {
+    // Try server's mutable catalog first (so admin edits via bot are reflected live)
+    if (CONFIG.API_URL) {
+      try {
+        const res = await fetch(`${CONFIG.API_URL.replace(/\/$/, '')}/api/catalog`, { cache: 'no-cache' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && typeof data === 'object' && Object.keys(data).length > 0) return data;
+        }
+      } catch (e) { /* fall through to static */ }
+    }
+    // Fallback: static catalog.json on the same origin
     const res = await fetch('catalog.json', { cache: 'no-cache' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
