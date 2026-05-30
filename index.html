@@ -458,6 +458,97 @@
     cursor: pointer;
   }
 
+  /* ========== Contact CTA + form ========== */
+  .cta-wrap { padding: 4px var(--pad) 40px; }
+  .cta-card {
+    background: linear-gradient(135deg, rgba(61, 220, 151, 0.14), rgba(61, 220, 151, 0.03));
+    border: 1px solid rgba(61, 220, 151, 0.24);
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: transform 120ms ease, opacity 120ms ease;
+  }
+  .cta-card:active { transform: scale(0.985); opacity: 0.9; }
+  .cta-tile {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: var(--accent);
+    color: #0a1410;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .cta-tile svg { width: 22px; height: 22px; stroke-width: 2; }
+  .cta-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .cta-name { font-size: 16px; font-weight: 600; line-height: 1.2; color: var(--text); }
+  .cta-sub  { font-size: 13px; font-weight: 400; color: var(--text-dim); }
+
+  .contact-form {
+    padding: 12px var(--pad) 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .contact-textarea {
+    width: 100%;
+    min-height: 140px;
+    padding: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 15px;
+    line-height: 1.45;
+    resize: vertical;
+    outline: none;
+    transition: border-color 160ms ease;
+  }
+  .contact-textarea::placeholder { color: var(--text-mute); }
+  .contact-textarea:focus { border-color: var(--accent); }
+  .contact-send-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    color: #0a1410;
+    border: none;
+    border-radius: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    font-size: 15px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: transform 120ms ease, opacity 160ms ease;
+  }
+  .contact-send-btn:active { transform: scale(0.985); }
+  .contact-send-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .contact-send-btn svg { width: 18px; height: 18px; stroke-width: 2.2; }
+  .contact-status {
+    font-size: 14px;
+    line-height: 1.45;
+    padding: 0 4px;
+    min-height: 20px;
+  }
+  .contact-status.success { color: var(--accent); }
+  .contact-status.error   { color: #ff7e7e; }
+  .contact-status.pending { color: var(--text-dim); }
+
   body.tg { background: #1d1e33; }
 </style>
 </head>
@@ -472,7 +563,7 @@
             <span class="brand-mark"><i data-lucide="map-pin"></i></span>
             <span class="brand-name">Lokatsiyalar</span>
           </div>
-          <span class="version">v 1.2</span>
+          <span class="version">v 1.3</span>
         </div>
         <h1>Kerakli joyni<br><span class="hl">toping</span></h1>
         <div class="subtitle">Kategoriyani tanlang yoki qidiruvdan foydalaning</div>
@@ -503,6 +594,20 @@
       <div class="empty-state" id="home-empty" style="display:none">
         <span class="empty-ico"><i data-lucide="search-x"></i></span>
         <div>Hech narsa topilmadi</div>
+      </div>
+
+      <div class="section-label">
+        <span>Aloqa</span>
+      </div>
+      <div class="cta-wrap">
+        <div class="cta-card" id="contact-cta">
+          <span class="cta-tile"><i data-lucide="message-circle"></i></span>
+          <div class="cta-body">
+            <div class="cta-name">Biz bilan bog'laning</div>
+            <div class="cta-sub">Savol yoki taklif yo'qmi? Yozing</div>
+          </div>
+          <span class="cat-arrow"><i data-lucide="chevron-right"></i></span>
+        </div>
       </div>
     </section>
 
@@ -538,6 +643,31 @@
       </div>
     </section>
 
+    <!-- ============ CONTACT ============ -->
+    <section class="screen enter-right" id="screen-contact" aria-hidden="true">
+      <header class="header cat">
+        <div class="topbar">
+          <button class="back-btn" id="contact-back-btn" aria-label="Orqaga">
+            <i data-lucide="arrow-left"></i>
+          </button>
+          <span class="ghost-btn" aria-hidden="true">
+            <i data-lucide="message-circle"></i>
+          </span>
+        </div>
+        <h1>Biz bilan<br><span class="hl">bog'laning</span></h1>
+        <div class="subtitle">Savol, taklif yoki shikoyatni yozing — admin tez orada javob beradi</div>
+      </header>
+
+      <div class="contact-form">
+        <textarea id="contact-message" class="contact-textarea" placeholder="Xabaringizni shu yerga yozing..." rows="6"></textarea>
+        <button id="contact-send" class="contact-send-btn">
+          <i data-lucide="send"></i>
+          <span>Yuborish</span>
+        </button>
+        <div id="contact-status" class="contact-status"></div>
+      </div>
+    </section>
+
     <!-- ============ LOADER ============ -->
     <div class="loader" id="loader">
       <div class="spinner"></div>
@@ -558,6 +688,16 @@
   </div>
 
 <script>
+  /* =========================================================
+     CONFIG
+     - Set API_URL to your deployed backend URL (HTTPS) when ready.
+       Leave empty until backend is up; the contact form will show
+       a friendly error in that case.
+     ========================================================= */
+  const CONFIG = {
+    API_URL: '', // e.g., 'https://api.your-server.sslip.io'
+  };
+
   /* =========================================================
      Telegram WebApp
      ========================================================= */
@@ -635,7 +775,8 @@
   function parseHash() {
     const h = location.hash.replace(/^#/, '');
     if (!h) return { screen: 'home' };
-    if (h === 'fav') return { screen: 'list', mode: 'fav' };
+    if (h === 'fav')     return { screen: 'list', mode: 'fav' };
+    if (h === 'contact') return { screen: 'contact' };
     const params = new URLSearchParams(h);
     const cat = params.get('cat');
     if (cat && state.catalog && state.catalog[cat]) {
@@ -646,9 +787,10 @@
 
   function setRoute(view, { replace = false } = {}) {
     const target =
-      view.screen === 'home' ? '' :
-      view.mode === 'fav'    ? '#fav' :
-                               `#cat=${encodeURIComponent(view.id)}`;
+      view.screen === 'home'    ? '' :
+      view.screen === 'contact' ? '#contact' :
+      view.mode === 'fav'       ? '#fav' :
+                                  `#cat=${encodeURIComponent(view.id)}`;
     const url = location.pathname + location.search + target;
     if (replace) history.replaceState(null, '', url);
     else if ((location.hash || '') !== target) location.hash = target;
@@ -657,10 +799,11 @@
   /* =========================================================
      DOM refs
      ========================================================= */
-  const screenHome  = document.getElementById('screen-home');
-  const screenList  = document.getElementById('screen-list');
-  const screenError = document.getElementById('screen-error');
-  const loaderEl    = document.getElementById('loader');
+  const screenHome    = document.getElementById('screen-home');
+  const screenList    = document.getElementById('screen-list');
+  const screenContact = document.getElementById('screen-contact');
+  const screenError   = document.getElementById('screen-error');
+  const loaderEl      = document.getElementById('loader');
 
   const grid             = document.getElementById('cat-grid');
   const homeSearchResults = document.getElementById('home-search-results');
@@ -877,32 +1020,47 @@
   function applyScreens(view, { animate = true } = {}) {
     if (!animate) document.body.classList.add('no-anim');
 
+    const targetEl =
+      view.screen === 'home'    ? screenHome :
+      view.screen === 'contact' ? screenContact :
+                                  screenList;
+    const deepScreens = [screenList, screenContact];
+
+    [screenHome, screenList, screenContact].forEach(s => {
+      s.setAttribute('aria-hidden', s === targetEl ? 'false' : 'true');
+    });
+
     if (view.screen === 'home') {
-      // list -> home: list slides right, home slides in
-      screenList.classList.remove('active');
-      screenList.classList.add('exit-right');
+      // Push deep screens off-right, bring home in
+      deepScreens.forEach(s => {
+        s.classList.remove('active', 'exit-left', 'enter-right');
+        s.classList.add('exit-right');
+      });
       screenHome.classList.remove('exit-left', 'exit-right', 'enter-right');
       void screenHome.offsetWidth;
       screenHome.classList.add('active');
-      screenHome.setAttribute('aria-hidden', 'false');
-      screenList.setAttribute('aria-hidden', 'true');
-      // After transition, reset list to off-right for next entry
       setTimeout(() => {
         if (currentView.screen === 'home') {
-          screenList.classList.remove('exit-right');
-          screenList.classList.add('enter-right');
+          deepScreens.forEach(s => {
+            s.classList.remove('exit-right');
+            s.classList.add('enter-right');
+          });
         }
       }, 320);
     } else {
-      // home -> list (or list -> list)
-      screenHome.classList.remove('active');
+      // Push home off-left, hide other deep screens off-right, bring target in
+      screenHome.classList.remove('active', 'enter-right', 'exit-right');
       screenHome.classList.add('exit-left');
-      screenList.classList.remove('enter-right', 'exit-right', 'exit-left');
-      void screenList.offsetWidth;
-      screenList.classList.add('active');
-      screenList.setAttribute('aria-hidden', 'false');
-      screenHome.setAttribute('aria-hidden', 'true');
-      screenList.scrollTop = 0;
+      deepScreens.forEach(s => {
+        if (s !== targetEl) {
+          s.classList.remove('active', 'exit-left', 'enter-right');
+          s.classList.add('exit-right');
+        }
+      });
+      targetEl.classList.remove('enter-right', 'exit-right', 'exit-left');
+      void targetEl.offsetWidth;
+      targetEl.classList.add('active');
+      targetEl.scrollTop = 0;
     }
 
     // Telegram BackButton
@@ -922,6 +1080,8 @@
     currentView = view;
     if (view.screen === 'home') {
       renderHome();
+    } else if (view.screen === 'contact') {
+      renderContact();
     } else {
       // reset list search when entering a new list
       if (currentListKey() !== viewKey(view)) {
@@ -931,6 +1091,62 @@
       renderList(view);
     }
     applyScreens(view, opts);
+  }
+
+  function renderContact() {
+    setContactStatus('', null);
+  }
+
+  function setContactStatus(text, kind /* 'success'|'error'|'pending'|null */) {
+    const el = document.getElementById('contact-status');
+    el.textContent = text || '';
+    el.className = 'contact-status' + (kind ? ' ' + kind : '');
+  }
+
+  async function sendContact() {
+    const textarea = document.getElementById('contact-message');
+    const btn = document.getElementById('contact-send');
+    const message = textarea.value.trim();
+
+    if (!message) {
+      setContactStatus("Xabar bo'sh bo'lmasligi kerak", 'error');
+      haptic('medium');
+      textarea.focus();
+      return;
+    }
+    if (message.length > 4000) {
+      setContactStatus("Xabar juda uzun (maks. 4000 belgi)", 'error');
+      return;
+    }
+    if (!CONFIG.API_URL) {
+      setContactStatus("Server hali sozlanmagan. Iltimos, keyinroq urinib ko'ring.", 'error');
+      return;
+    }
+
+    btn.disabled = true;
+    setContactStatus("Yuborilmoqda...", 'pending');
+
+    try {
+      const res = await fetch(`${CONFIG.API_URL.replace(/\/$/, '')}/api/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          initData: (tg && tg.initData) || '',
+          message: message,
+        }),
+      });
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '');
+        throw new Error(`HTTP ${res.status}${txt ? ': ' + txt.slice(0, 120) : ''}`);
+      }
+      setContactStatus("Xabaringiz yuborildi. Admin tez orada javob beradi.", 'success');
+      textarea.value = '';
+      haptic('success');
+    } catch (e) {
+      setContactStatus("Xatolik: " + (e && e.message ? e.message : "noma'lum"), 'error');
+    } finally {
+      btn.disabled = false;
+    }
   }
 
   function viewKey(view) {
@@ -1018,7 +1234,23 @@
       setRoute({ screen: 'list', mode: 'fav' });
     });
 
-    // Back button
+    // Contact CTA
+    document.getElementById('contact-cta').addEventListener('click', () => {
+      haptic('light');
+      setRoute({ screen: 'contact' });
+    });
+
+    // Contact back button
+    document.getElementById('contact-back-btn').addEventListener('click', () => {
+      haptic('light');
+      if (history.length > 1) history.back();
+      else setRoute({ screen: 'home' });
+    });
+
+    // Contact form submit
+    document.getElementById('contact-send').addEventListener('click', sendContact);
+
+    // Back button (category/fav)
     backBtn.addEventListener('click', () => {
       haptic('light');
       if (history.length > 1) history.back();
