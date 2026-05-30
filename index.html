@@ -121,6 +121,25 @@
     letter-spacing: 0.12em;
     text-transform: uppercase;
   }
+  .credit {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    letter-spacing: 0.02em;
+    text-decoration: none;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: color 160ms ease, background 160ms ease, border-color 160ms ease, transform 120ms ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .credit:active { transform: scale(0.94); }
+  .credit:hover { color: var(--accent); border-color: rgba(61, 220, 151, 0.3); }
+  .credit svg { width: 11px; height: 11px; stroke-width: 2.2; opacity: 0.65; }
 
   .header h1 {
     margin: 0;
@@ -563,7 +582,10 @@
             <span class="brand-mark"><i data-lucide="map-pin"></i></span>
             <span class="brand-name">Lokatsiyalar</span>
           </div>
-          <span class="version">v 1.3</span>
+          <a class="credit" id="credit-link" href="https://t.me/zayd_usamah" aria-label="Bot muallifi">
+            <i data-lucide="user"></i>
+            <span>@zayd_usamah</span>
+          </a>
         </div>
         <h1>Kerakli joyni<br><span class="hl">toping</span></h1>
         <div class="subtitle">Kategoriyani tanlang yoki qidiruvdan foydalaning</div>
@@ -1274,6 +1296,18 @@
     document.getElementById('contact-cta').addEventListener('click', () => {
       haptic('light');
       setRoute({ screen: 'contact' });
+    });
+
+    // Credit (author link)
+    document.getElementById('credit-link').addEventListener('click', (e) => {
+      e.preventDefault();
+      haptic('light');
+      try {
+        if (tg && tg.openTelegramLink) tg.openTelegramLink('https://t.me/zayd_usamah');
+        else window.open('https://t.me/zayd_usamah', '_blank');
+      } catch (_) {
+        window.open('https://t.me/zayd_usamah', '_blank');
+      }
     });
 
     // Contact back button
