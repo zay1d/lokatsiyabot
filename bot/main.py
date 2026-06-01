@@ -57,6 +57,7 @@ STATE_FILE = Path(os.environ.get("STATE_FILE", "state.json"))
 FAVORITES_FILE = Path(os.environ.get("FAVORITES_FILE", "favorites.json"))
 CATALOG_FILE = Path(os.environ.get("CATALOG_FILE", "catalog.json"))
 SEED_CATALOG = Path(os.environ.get("SEED_CATALOG", "../catalog.json"))
+TRACKS_FILE = Path(os.environ.get("TRACKS_FILE", "tracks.json"))
 
 bot = Bot(BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher(storage=MemoryStorage())
@@ -135,6 +136,75 @@ def save_catalog(cat: dict) -> None:
 
 init_catalog_file()
 catalog_data: dict = load_catalog()
+
+
+# -------------------- Tracks (analytics) --------------------
+# Stored at day granularity so we don't keep exact timestamps.
+# {
+#   "users": set[str(user_id)],          # all-time unique users
+#   "contacts": int,                      # running counter of contact submissions
+#   "daily": { "YYYY-MM-DD": {
+#       "users": set[str(user_id)],       # unique users that day
+#       "opens": int,                      # total opens that day
+#       "categories": {cat_id: int},
+#       "locations": {url: int}
+#   }}
+# }
+
+def load_tracks() -> dict:
+    base = {"users": set(), "contacts": 0, "daily": {}}
+    if not TRACKS_FILE.exists():
+        return base
+    try:
+        d = json.loads(TRACKS_FILE.read_text(encoding="utf-8"))
+        return {
+            "users": set(d.get("users", [])),
+            "contacts": int(d.get("contacts", 0)),
+            "daily": {
+                day: {
+                    "users": set(v.get("users", [])),
+                    "opens": int(v.get("opens", 0)),
+                    "categories": {k: int(c) for k, c in v.get("categories", {}).items()},
+                    "locations": {k: int(c) for k, c in v.get("locations", {}).items()},
+                } for day, v in d.get("daily", {}).items()
+            },
+        }
+    except Exception:
+        log.exception("Failed to load tracks")
+        return base
+
+
+def save_tracks(t: dict) -> None:
+    try:
+        serialized = {
+            "users": sorted(t["users"]),
+            "contacts": t["contacts"],
+            "daily": {
+                day: {
+                    "users": sorted(v["users"]),
+                    "opens": v["opens"],
+                    "categories": v["categories"],
+                    "locations": v["locations"],
+                } for day, v in t["daily"].items()
+            },
+        }
+        TRACKS_FILE.write_text(json.dumps(serialized, ensure_ascii=False), encoding="utf-8")
+    except Exception:
+        log.exception("Failed to save tracks")
+
+
+tracks: dict = load_tracks()
+
+
+def _today_utc() -> str:
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+
+def _day_bucket(day: str) -> dict:
+    if day not in tracks["daily"]:
+        tracks["daily"][day] = {"users": set(), "opens": 0, "categories": {}, "locations": {}}
+    return tracks["daily"][day]
 
 
 def slugify(name: str) -> str:
@@ -239,6 +309,8 @@ async def handle_contact(request: web.Request) -> web.Response:
 
     admin_msg_to_user[sent.message_id] = user_id
     save_state(admin_msg_to_user)
+    tracks["contacts"] += 1
+    save_tracks(tracks)
     log.info("Forwarded msg from user %s to admin (message_id=%s)", user_id, sent.message_id)
     return web.json_response({"ok": True})
 
@@ -251,6 +323,42 @@ async def handle_catalog(request: web.Request) -> web.Response:
     resp = web.json_response(catalog_data)
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     return resp
+
+
+async def handle_track(request: web.Request) -> web.Response:
+    try:
+        data = await request.json()
+    except Exception:
+        return web.json_response({"error": "invalid json"}, status=400)
+
+    parsed = verify_init_data(data.get("initData", ""), BOT_TOKEN)
+    if not parsed:
+        return web.json_response({"error": "invalid initData"}, status=403)
+    uid = extract_user_id(parsed)
+    if not uid:
+        return web.json_response({"error": "no user"}, status=400)
+
+    event = data.get("event") or ""
+    target = (data.get("target") or "")[:500]
+    if event not in ("open", "category", "location"):
+        return web.json_response({"error": "bad event"}, status=400)
+    if event in ("category", "location") and not target:
+        return web.json_response({"error": "target required"}, status=400)
+
+    str_uid = str(uid)
+    bucket = _day_bucket(_today_utc())
+
+    if event == "open":
+        tracks["users"].add(str_uid)
+        bucket["users"].add(str_uid)
+        bucket["opens"] += 1
+    elif event == "category":
+        bucket["categories"][target] = bucket["categories"].get(target, 0) + 1
+    elif event == "location":
+        bucket["locations"][target] = bucket["locations"].get(target, 0) + 1
+
+    save_tracks(tracks)
+    return web.json_response({"ok": True})
 
 
 async def handle_favs_list(request: web.Request) -> web.Response:
@@ -329,6 +437,7 @@ ADMIN_HELP = (
     "/del — joyni o'chirish\n"
     "/cat_add — yangi kategoriya qo'shish\n"
     "/list — barcha kategoriya va joylar\n"
+    "/stats — statistika (foydalanuvchilar, ochilishlar, top)\n"
     "/cancel — joriy jarayonni bekor qilish\n"
     "/help — shu ro'yxat"
 )
@@ -362,6 +471,78 @@ async def cmd_cancel(msg: Message, state: FSMContext) -> None:
         await msg.answer("❌ Bekor qilindi")
     else:
         await msg.answer("Faol jarayon yo'q")
+
+
+@dp.message(Command("stats"))
+async def cmd_stats(msg: Message) -> None:
+    if not is_admin(msg):
+        return
+    from datetime import datetime, timedelta, timezone
+
+    today_date = datetime.now(timezone.utc).date()
+    today_str = today_date.isoformat()
+    last7 = [(today_date - timedelta(days=i)).isoformat() for i in range(7)]
+    last30 = [(today_date - timedelta(days=i)).isoformat() for i in range(30)]
+
+    def union_users(days):
+        out = set()
+        for d in days:
+            out.update(tracks["daily"].get(d, {}).get("users", set()))
+        return out
+
+    total_users = len(tracks["users"])
+    today_users = len(tracks["daily"].get(today_str, {}).get("users", set()))
+    week_users = len(union_users(last7))
+    month_users = len(union_users(last30))
+
+    today_opens = tracks["daily"].get(today_str, {}).get("opens", 0)
+    week_opens = sum(tracks["daily"].get(d, {}).get("opens", 0) for d in last7)
+    total_opens = sum(v.get("opens", 0) for v in tracks["daily"].values())
+
+    cat_counts: dict[str, int] = {}
+    for d in last30:
+        for cat_id, c in tracks["daily"].get(d, {}).get("categories", {}).items():
+            cat_counts[cat_id] = cat_counts.get(cat_id, 0) + c
+    top_cats = sorted(cat_counts.items(), key=lambda x: -x[1])[:5]
+
+    loc_counts: dict[str, int] = {}
+    for d in last30:
+        for url, c in tracks["daily"].get(d, {}).get("locations", {}).items():
+            loc_counts[url] = loc_counts.get(url, 0) + c
+    top_locs = sorted(loc_counts.items(), key=lambda x: -x[1])[:10]
+
+    url_to_name = {}
+    for cat in catalog_data.values():
+        for loc in cat.get("locations", []):
+            if loc.get("url"):
+                url_to_name[loc["url"]] = loc.get("name", "")
+
+    lines = ["📊 <b>Statistika</b>", ""]
+    lines.append("👥 <b>Foydalanuvchilar:</b>")
+    lines.append(f"  Jami: <b>{total_users}</b>")
+    lines.append(f"  Bugun: {today_users} · 7 kun: {week_users} · 30 kun: {month_users}")
+    lines.append("")
+    lines.append("📈 <b>Ochilishlar:</b>")
+    lines.append(f"  Bugun: {today_opens} · 7 kun: {week_opens} · Jami: {total_opens}")
+    lines.append("")
+
+    if top_cats:
+        lines.append("🔝 <b>Top kategoriyalar (30 kun):</b>")
+        for i, (cat_id, c) in enumerate(top_cats, 1):
+            name = catalog_data.get(cat_id, {}).get("name", cat_id)
+            lines.append(f"  {i}. {html_escape(name)} — {c}")
+        lines.append("")
+
+    if top_locs:
+        lines.append("🔝 <b>Top joylar (30 kun):</b>")
+        for i, (url, c) in enumerate(top_locs, 1):
+            name = url_to_name.get(url) or url[:40]
+            lines.append(f"  {i}. {html_escape(name)} — {c}")
+        lines.append("")
+
+    lines.append(f"📩 <b>Aloqa xabarlari:</b> {tracks['contacts']}")
+
+    await msg.answer("\n".join(lines))
 
 
 @dp.message(Command("list"))
@@ -644,6 +825,7 @@ async def main() -> None:
     app.router.add_post("/api/favorites/list", handle_favs_list)
     app.router.add_post("/api/favorites/toggle", handle_favs_toggle)
     app.router.add_get("/api/catalog", handle_catalog)
+    app.router.add_post("/api/track", handle_track)
     app.router.add_get("/health", handle_health)
 
     runner = web.AppRunner(app)
