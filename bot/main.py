@@ -51,6 +51,27 @@ log = logging.getLogger("contact-bot")
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 ADMIN_CHAT_ID = int(os.environ["ADMIN_CHAT_ID"])
+
+
+def _parse_admin_user_ids(raw: str | None, fallback: int) -> set[int]:
+    """ADMIN_USER_IDS env var: comma-separated user IDs allowed to run admin commands.
+    Always includes ADMIN_CHAT_ID owner as a sane default."""
+    out: set[int] = {fallback}
+    if raw:
+        for part in raw.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            try:
+                out.add(int(part))
+            except ValueError:
+                log.warning("ADMIN_USER_IDS: skipping invalid value %r", part)
+    return out
+
+
+ADMIN_USER_IDS: set[int] = _parse_admin_user_ids(os.environ.get("ADMIN_USER_IDS"), ADMIN_CHAT_ID)
+log.info("Admin user IDs: %s", sorted(ADMIN_USER_IDS))
+
 PORT = int(os.environ.get("PORT", "8080"))
 ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "*")
 STATE_FILE = Path(os.environ.get("STATE_FILE", "state.json"))
@@ -214,8 +235,11 @@ def slugify(name: str) -> str:
 
 
 def is_admin(msg_or_cb) -> bool:
-    chat_id = msg_or_cb.chat.id if hasattr(msg_or_cb, "chat") else msg_or_cb.message.chat.id
-    return chat_id == ADMIN_CHAT_ID
+    """Admin = the message author is in ADMIN_USER_IDS. Works in both DM and group chats."""
+    from_user = getattr(msg_or_cb, "from_user", None)
+    if from_user and from_user.id in ADMIN_USER_IDS:
+        return True
+    return False
 
 
 def extract_user_id(parsed: dict) -> int | None:
