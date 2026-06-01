@@ -815,6 +815,16 @@
       });
     } catch (e) { /* silent: optimistic UI already updated, will reconcile on next load */ }
   }
+
+  function trackEvent(event, target) {
+    if (!apiAvailable()) return;
+    // Fire and forget; never block UI on analytics
+    fetch(`${CONFIG.API_URL.replace(/\/$/, '')}/api/track`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ initData: tg.initData, event, target: target || '' }),
+    }).catch(() => {});
+  }
   function getAllFavLocations() {
     const out = [];
     if (!state.catalog) return out;
@@ -933,6 +943,7 @@
       grid.querySelectorAll('.cat-card').forEach(card => {
         card.addEventListener('click', () => {
           haptic('light');
+          trackEvent('category', card.dataset.id);
           const cat = state.catalog[card.dataset.id];
           if (cat && cat.locations.length === 1) {
             openLocation(cat.locations[0]);
@@ -1018,6 +1029,7 @@
   function openLocation(loc) {
     const url = loc && loc.url;
     if (!url) return;
+    trackEvent('location', url);
     const isTelegramLink = /^https?:\/\/t\.me\//i.test(url);
     try {
       if (isTelegramLink && tg && tg.openTelegramLink) {
@@ -1273,6 +1285,9 @@
 
     // Sync favourites from server in the background (no UI block)
     syncFavsFromServer();
+
+    // Analytics: app opened
+    trackEvent('open');
 
     // Listen to hash changes
     window.addEventListener('hashchange', () => {
