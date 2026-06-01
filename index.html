@@ -830,7 +830,7 @@
     if (!state.catalog) return out;
     for (const [catId, cat] of Object.entries(state.catalog)) {
       cat.locations.forEach((loc) => {
-        if (isFav(loc)) out.push({ ...loc, _catId: catId, _icon: cat.icon, _catName: cat.name });
+        if (isFav(loc)) out.push({ ...loc, _catId: catId, _icon: loc.icon || cat.icon, _catName: cat.name });
       });
     }
     return out;
@@ -961,7 +961,7 @@
       for (const [catId, cat] of Object.entries(state.catalog)) {
         cat.locations.forEach((loc) => {
           if (matches(loc.name, q) || matches(cat.name, q)) {
-            results.push({ ...loc, _catId: catId, _icon: cat.icon, _catName: cat.name });
+            results.push({ ...loc, _catId: catId, _icon: loc.icon || cat.icon, _catName: cat.name });
           }
         });
       }
@@ -1056,7 +1056,7 @@
       subText = `${items.length} ta joy`;
     } else {
       const cat = state.catalog[view.id];
-      items = cat.locations.map(l => ({ ...l, _catId: view.id, _icon: cat.icon, _catName: cat.name }));
+      items = cat.locations.map(l => ({ ...l, _catId: view.id, _icon: l.icon || cat.icon, _catName: cat.name }));
       title = cat.name;
       icon = cat.icon;
       emptyText = 'Hech narsa topilmadi';

@@ -431,11 +431,67 @@ class DelLocation(StatesGroup):
     waiting_location = State()
 
 
+class EditCategoryIcon(StatesGroup):
+    waiting_category = State()
+    waiting_icon = State()
+
+
+class EditLocationIcon(StatesGroup):
+    waiting_category = State()
+    waiting_location = State()
+    waiting_icon = State()
+
+
+# (emoji, lucide-name) — emoji is just a visual hint in the button text
+COMMON_ICONS: list[tuple[str, str]] = [
+    ("🛍️", "shopping-bag"),
+    ("🏪", "store"),
+    ("🏷️", "tag"),
+    ("🎁", "gift"),
+    ("☕", "coffee"),
+    ("🍽️", "utensils"),
+    ("🍲", "soup"),
+    ("🍕", "pizza"),
+    ("🍰", "cake-slice"),
+    ("🥐", "croissant"),
+    ("🍨", "ice-cream"),
+    ("🩺", "stethoscope"),
+    ("😊", "smile"),
+    ("➕", "cross"),
+    ("💊", "pill"),
+    ("✂️", "scissors"),
+    ("✈️", "plane"),
+    ("🚗", "car"),
+    ("⛽", "fuel"),
+    ("📍", "map-pin"),
+    ("🔥", "flame"),
+    ("🏋️", "dumbbell"),
+    ("🌳", "trees"),
+    ("🛋️", "sofa"),
+    ("🏠", "home"),
+    ("🔧", "wrench"),
+]
+
+
+def icons_keyboard(prefix: str, *, skip_label: str | None = None):
+    """Inline keyboard with curated lucide icons. Optionally add a 'skip' row."""
+    builder = InlineKeyboardBuilder()
+    for emoji, name in COMMON_ICONS:
+        builder.button(text=f"{emoji} {name}", callback_data=f"{prefix}:{name}")
+    builder.adjust(2)
+    if skip_label:
+        from aiogram.types import InlineKeyboardButton
+        builder.row(InlineKeyboardButton(text=skip_label, callback_data=f"{prefix}:_skip"))
+    return builder.as_markup()
+
+
 ADMIN_HELP = (
     "<b>Admin buyruqlari:</b>\n\n"
     "/add — yangi joy qo'shish\n"
     "/del — joyni o'chirish\n"
     "/cat_add — yangi kategoriya qo'shish\n"
+    "/cat_icon — kategoriya ikonasini o'zgartirish\n"
+    "/loc_icon — joy uchun shaxsiy ikona qo'yish\n"
     "/list — barcha kategoriya va joylar\n"
     "/stats — statistika (foydalanuvchilar, ochilishlar, top)\n"
     "/cancel — joriy jarayonni bekor qilish\n"
@@ -668,27 +724,17 @@ async def cat_name_received(msg: Message, state: FSMContext) -> None:
     await state.update_data(name=name)
     await msg.answer(
         f"📁 {html_escape(name)}\n\n"
-        "Ikona nomini yuboring (lucide.dev/icons).\n\n"
-        "Misollar: <code>coffee</code>, <code>utensils</code>, <code>shopping-bag</code>, "
-        "<code>store</code>, <code>flame</code>, <code>smile</code>, <code>trees</code>, "
-        "<code>plane</code>, <code>tag</code>, <code>sofa</code>, <code>dumbbell</code>, "
-        "<code>croissant</code>, <code>cake-slice</code>, <code>stethoscope</code>"
+        "Ikonani tanlang (yoki lucide-nomini yozing):",
+        reply_markup=icons_keyboard("addcat_icon"),
     )
     await state.set_state(AddCategory.waiting_icon)
 
 
-@dp.message(AddCategory.waiting_icon)
-async def cat_icon_received(msg: Message, state: FSMContext) -> None:
-    if not is_admin(msg):
-        return
-    icon = (msg.text or "").strip().lower()
-    if not re.match(r"^[a-z0-9-]{1,40}$", icon):
-        await msg.answer("Ikona nomi noto'g'ri (lotin harf, raqam, defis). Qaytadan:")
-        return
+async def _finalize_add_category(message_target, state: FSMContext, icon: str) -> None:
     data = await state.get_data()
     name = data.get("name")
     if not name:
-        await msg.answer("Jarayon buzildi, qaytadan /cat_add")
+        await message_target.answer("Jarayon buzildi, qaytadan /cat_add")
         await state.clear()
         return
     base = slugify(name)
@@ -699,7 +745,7 @@ async def cat_icon_received(msg: Message, state: FSMContext) -> None:
         suffix += 1
     catalog_data[cat_id] = {"name": name, "icon": icon, "locations": []}
     save_catalog(catalog_data)
-    await msg.answer(
+    await message_target.answer(
         "✅ <b>Kategoriya qo'shildi</b>\n\n"
         f"📁 {html_escape(name)}\n"
         f"🎨 {html_escape(icon)}\n"
@@ -707,6 +753,34 @@ async def cat_icon_received(msg: Message, state: FSMContext) -> None:
         "Endi /add bilan joy qo'shing."
     )
     await state.clear()
+
+
+@dp.callback_query(F.data.startswith("addcat_icon:"), AddCategory.waiting_icon)
+async def cat_icon_picked(cb: CallbackQuery, state: FSMContext) -> None:
+    if not is_admin(cb):
+        await cb.answer()
+        return
+    icon = cb.data.split(":", 1)[1]
+    if icon == "_skip" or not re.match(r"^[a-z0-9-]{1,40}$", icon):
+        await cb.answer("Yaroqsiz", show_alert=True)
+        return
+    try:
+        await cb.message.edit_reply_markup(reply_markup=None)
+    except Exception:
+        pass
+    await _finalize_add_category(cb.message, state, icon)
+    await cb.answer()
+
+
+@dp.message(AddCategory.waiting_icon)
+async def cat_icon_typed(msg: Message, state: FSMContext) -> None:
+    if not is_admin(msg):
+        return
+    icon = (msg.text or "").strip().lower()
+    if not re.match(r"^[a-z0-9-]{1,40}$", icon):
+        await msg.answer("Ikona nomi noto'g'ri (lotin harf, raqam, defis). Qaytadan yozing yoki tugmadan tanlang:")
+        return
+    await _finalize_add_category(msg, state, icon)
 
 
 # ----- /del flow -----
@@ -790,6 +864,243 @@ async def del_loc_chosen(cb: CallbackQuery, state: FSMContext) -> None:
     )
     await state.clear()
     await cb.answer()
+
+
+# ----- /cat_icon flow (change icon of existing category) -----
+
+@dp.message(Command("cat_icon"))
+async def cmd_cat_icon(msg: Message, state: FSMContext) -> None:
+    if not is_admin(msg):
+        return
+    await state.clear()
+    if not catalog_data:
+        await msg.answer("Catalog bo'sh")
+        return
+    builder = InlineKeyboardBuilder()
+    for cat_id, cat in catalog_data.items():
+        ico = cat.get("icon") or "—"
+        builder.button(text=f"{cat['name']} · {ico}", callback_data=f"caticon_cat:{cat_id}")
+    builder.adjust(1)
+    await msg.answer(
+        "Qaysi kategoriya ikonasini o'zgartiramiz?",
+        reply_markup=builder.as_markup(),
+    )
+    await state.set_state(EditCategoryIcon.waiting_category)
+
+
+@dp.callback_query(F.data.startswith("caticon_cat:"), EditCategoryIcon.waiting_category)
+async def cat_icon_cat_chosen(cb: CallbackQuery, state: FSMContext) -> None:
+    if not is_admin(cb):
+        await cb.answer()
+        return
+    cat_id = cb.data.split(":", 1)[1]
+    if cat_id not in catalog_data:
+        await cb.answer("Yo'q", show_alert=True)
+        return
+    await state.update_data(cat_id=cat_id)
+    await cb.message.edit_text(
+        f"📁 {html_escape(catalog_data[cat_id]['name'])}\n\n"
+        "Yangi ikonani tanlang (yoki lucide-nomini yozing):",
+        reply_markup=icons_keyboard("caticon_set"),
+    )
+    await state.set_state(EditCategoryIcon.waiting_icon)
+    await cb.answer()
+
+
+async def _apply_category_icon(message_target, state: FSMContext, icon: str) -> None:
+    data = await state.get_data()
+    cat_id = data.get("cat_id")
+    if not cat_id or cat_id not in catalog_data:
+        await message_target.answer("Jarayon buzildi, qaytadan /cat_icon")
+        await state.clear()
+        return
+    catalog_data[cat_id]["icon"] = icon
+    save_catalog(catalog_data)
+    await message_target.answer(
+        "✅ <b>Ikona o'zgartirildi</b>\n\n"
+        f"📁 {html_escape(catalog_data[cat_id]['name'])}\n"
+        f"🎨 {html_escape(icon)}"
+    )
+    await state.clear()
+
+
+@dp.callback_query(F.data.startswith("caticon_set:"), EditCategoryIcon.waiting_icon)
+async def cat_icon_set_picked(cb: CallbackQuery, state: FSMContext) -> None:
+    if not is_admin(cb):
+        await cb.answer()
+        return
+    icon = cb.data.split(":", 1)[1]
+    if icon == "_skip" or not re.match(r"^[a-z0-9-]{1,40}$", icon):
+        await cb.answer("Yaroqsiz", show_alert=True)
+        return
+    try:
+        await cb.message.edit_reply_markup(reply_markup=None)
+    except Exception:
+        pass
+    await _apply_category_icon(cb.message, state, icon)
+    await cb.answer()
+
+
+@dp.message(EditCategoryIcon.waiting_icon)
+async def cat_icon_set_typed(msg: Message, state: FSMContext) -> None:
+    if not is_admin(msg):
+        return
+    icon = (msg.text or "").strip().lower()
+    if not re.match(r"^[a-z0-9-]{1,40}$", icon):
+        await msg.answer("Ikona noto'g'ri. Qaytadan:")
+        return
+    await _apply_category_icon(msg, state, icon)
+
+
+# ----- /loc_icon flow (set/remove custom icon for a single location) -----
+
+@dp.message(Command("loc_icon"))
+async def cmd_loc_icon(msg: Message, state: FSMContext) -> None:
+    if not is_admin(msg):
+        return
+    await state.clear()
+    if not catalog_data:
+        await msg.answer("Catalog bo'sh")
+        return
+    builder = InlineKeyboardBuilder()
+    for cat_id, cat in catalog_data.items():
+        count = len(cat.get("locations", []))
+        if count == 0:
+            continue
+        builder.button(text=f"{cat['name']} ({count})", callback_data=f"locicon_cat:{cat_id}")
+    builder.adjust(1)
+    await msg.answer(
+        "Qaysi kategoriyadagi joy ikonasini o'zgartiramiz?",
+        reply_markup=builder.as_markup(),
+    )
+    await state.set_state(EditLocationIcon.waiting_category)
+
+
+@dp.callback_query(F.data.startswith("locicon_cat:"), EditLocationIcon.waiting_category)
+async def loc_icon_cat_chosen(cb: CallbackQuery, state: FSMContext) -> None:
+    if not is_admin(cb):
+        await cb.answer()
+        return
+    cat_id = cb.data.split(":", 1)[1]
+    if cat_id not in catalog_data:
+        await cb.answer("Yo'q", show_alert=True)
+        return
+    locs = catalog_data[cat_id].get("locations", [])
+    if not locs:
+        await cb.answer("Bo'sh", show_alert=True)
+        return
+    await state.update_data(cat_id=cat_id)
+    builder = InlineKeyboardBuilder()
+    for i, loc in enumerate(locs):
+        cur_icon = loc.get("icon") or "—"
+        nm = loc["name"]
+        if len(nm) > 26:
+            nm = nm[:23] + "..."
+        builder.button(text=f"{i+1}. {nm} · {cur_icon}", callback_data=f"locicon_loc:{cat_id}:{i}")
+    builder.adjust(1)
+    await cb.message.edit_text(
+        f"📁 {html_escape(catalog_data[cat_id]['name'])}\n\nQaysi joy ikonasini o'zgartiramiz?",
+        reply_markup=builder.as_markup(),
+    )
+    await state.set_state(EditLocationIcon.waiting_location)
+    await cb.answer()
+
+
+@dp.callback_query(F.data.startswith("locicon_loc:"), EditLocationIcon.waiting_location)
+async def loc_icon_loc_chosen(cb: CallbackQuery, state: FSMContext) -> None:
+    if not is_admin(cb):
+        await cb.answer()
+        return
+    parts = cb.data.split(":")
+    if len(parts) != 3:
+        await cb.answer("Bad data", show_alert=True)
+        return
+    cat_id = parts[1]
+    try:
+        idx = int(parts[2])
+    except ValueError:
+        await cb.answer("Bad index", show_alert=True)
+        return
+    if cat_id not in catalog_data:
+        await cb.answer("Yo'q", show_alert=True)
+        return
+    locs = catalog_data[cat_id].get("locations", [])
+    if idx < 0 or idx >= len(locs):
+        await cb.answer("Yo'q", show_alert=True)
+        return
+    await state.update_data(cat_id=cat_id, idx=idx)
+    cat_icon = catalog_data[cat_id].get("icon", "—")
+    await cb.message.edit_text(
+        f"📁 {html_escape(catalog_data[cat_id]['name'])}\n"
+        f"📍 {html_escape(locs[idx]['name'])}\n\n"
+        "Yangi ikonani tanlang yoki <i>kategoriya ikonasini</i> ishlatish uchun \"Yo'q\":",
+        reply_markup=icons_keyboard("locicon_set", skip_label=f"⏭ Yo'q ({cat_icon} — kategoriya ikonasi)"),
+    )
+    await state.set_state(EditLocationIcon.waiting_icon)
+    await cb.answer()
+
+
+async def _apply_location_icon(message_target, state: FSMContext, icon: str | None) -> None:
+    data = await state.get_data()
+    cat_id = data.get("cat_id")
+    idx = data.get("idx")
+    if not cat_id or cat_id not in catalog_data or idx is None:
+        await message_target.answer("Jarayon buzildi, qaytadan /loc_icon")
+        await state.clear()
+        return
+    locs = catalog_data[cat_id].get("locations", [])
+    if idx >= len(locs):
+        await message_target.answer("Joy topilmadi, qaytadan /loc_icon")
+        await state.clear()
+        return
+    if icon is None:
+        locs[idx].pop("icon", None)
+        msg_icon = f"{catalog_data[cat_id].get('icon', '—')} (kategoriya)"
+    else:
+        locs[idx]["icon"] = icon
+        msg_icon = icon
+    save_catalog(catalog_data)
+    await message_target.answer(
+        "✅ <b>Ikona o'zgartirildi</b>\n\n"
+        f"📁 {html_escape(catalog_data[cat_id]['name'])}\n"
+        f"📍 {html_escape(locs[idx]['name'])}\n"
+        f"🎨 {html_escape(msg_icon)}"
+    )
+    await state.clear()
+
+
+@dp.callback_query(F.data.startswith("locicon_set:"), EditLocationIcon.waiting_icon)
+async def loc_icon_set_picked(cb: CallbackQuery, state: FSMContext) -> None:
+    if not is_admin(cb):
+        await cb.answer()
+        return
+    icon = cb.data.split(":", 1)[1]
+    try:
+        await cb.message.edit_reply_markup(reply_markup=None)
+    except Exception:
+        pass
+    if icon == "_skip":
+        await _apply_location_icon(cb.message, state, None)
+    elif re.match(r"^[a-z0-9-]{1,40}$", icon):
+        await _apply_location_icon(cb.message, state, icon)
+    else:
+        await cb.answer("Yaroqsiz", show_alert=True)
+        return
+    await cb.answer()
+
+
+@dp.message(EditLocationIcon.waiting_icon)
+async def loc_icon_set_typed(msg: Message, state: FSMContext) -> None:
+    if not is_admin(msg):
+        return
+    text = (msg.text or "").strip().lower()
+    if text in ("—", "-", "yoq", "yo'q", "skip"):
+        await _apply_location_icon(msg, state, None)
+        return
+    if not re.match(r"^[a-z0-9-]{1,40}$", text):
+        await msg.answer("Ikona noto'g'ri. Qaytadan yozing yoki tugmadan tanlang:")
+        return
+    await _apply_location_icon(msg, state, text)
 
 
 @dp.message(F.reply_to_message, StateFilter(None))
