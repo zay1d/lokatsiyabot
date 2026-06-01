@@ -1,28 +1,39 @@
 <!DOCTYPE html>
-<html lang="ru"><head>
+<html lang="uz"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Lokatsiyalar</title>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #1d1e33;
-    --bg-elev: #0a0a0a;
-    --surface: #111418;
-    --surface-2: #181c22;
-    --tile: #1a1f26;
-    --tile-2: #232932;
-    --border: rgba(255, 255, 255, 0.06);
-    --border-strong: rgba(255, 255, 255, 0.10);
-    --text: #ffffff;
-    --text-dim: #8a949f;
-    --text-mute: #5a6470;
+    /* Friendly Card palette (Stitch design system) */
+    --bg: #0c141b;
+    --bg-elev: #070f15;
+    --surface: #151c23;
+    --surface-2: #192027;
+    --surface-3: #232b32;
+    --tile: #192027;
+    --tile-2: #2e363d;
+    --border: rgba(61, 220, 151, 0.10);
+    --border-strong: rgba(61, 220, 151, 0.22);
+    --text: #dbe3ed;
+    --text-dim: #bbcabe;
+    --text-mute: #859489;
     --accent: #3ddc97;
-    --accent-2: #1f8a7a;
-    --accent-glow: rgba(61, 220, 151, 0.18);
+    --accent-bright: #61f9b1;
+    --accent-deep: #003822;
+    --accent-soft: rgba(61, 220, 151, 0.08);
+    --accent-glow: rgba(61, 220, 151, 0.22);
+    --error: #ff7e7e;
     --pad: 20px;
+    --radius-card: 22px;
+    --radius-tile: 18px;
+    --tab-bar-h: 78px;
   }
 
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -30,8 +41,9 @@
     margin: 0; padding: 0;
     background: var(--bg);
     color: var(--text);
-    font-family: Tahoma, system-ui, sans-serif;
+    font-family: 'Quicksand', system-ui, sans-serif;
     font-size: 16px;
+    font-weight: 500;
     -webkit-font-smoothing: antialiased;
     overscroll-behavior-y: contain;
     min-height: 100vh;
@@ -44,25 +56,26 @@
     position: relative;
     overflow: hidden;
     padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
   }
 
+  /* Radial glow at top-right */
   #app::before {
     content: '';
     position: absolute;
-    top: -120px; right: -100px;
-    width: 320px; height: 320px;
+    top: -140px; right: -120px;
+    width: 360px; height: 360px;
     background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
     pointer-events: none;
     z-index: 0;
-    opacity: 0.6;
+    opacity: 0.7;
   }
 
+  /* SCREENS */
   .screen {
     position: absolute;
     inset: 0;
     padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: calc(var(--tab-bar-h) + env(safe-area-inset-bottom));
     transition: transform 300ms cubic-bezier(0.22, 0.61, 0.36, 1),
                 opacity 240ms ease;
     will-change: transform, opacity;
@@ -70,64 +83,57 @@
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     z-index: 1;
+    /* DEFAULT = off-screen (right) so only .active is visible/interactive */
+    transform: translateX(100%);
+    opacity: 0;
+    pointer-events: none;
   }
   body.no-anim .screen { transition: none !important; }
-  .screen.enter-right { transform: translateX(100%); opacity: 0; }
-  .screen.exit-left   { transform: translateX(-18%); opacity: 0; pointer-events: none; }
-  .screen.exit-right  { transform: translateX(100%); opacity: 0; pointer-events: none; }
-  .screen.active      { transform: translateX(0); opacity: 1; }
-
+  .screen.active {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .screen.exit-left {
+    transform: translateX(-18%);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .screen.no-tabs { padding-bottom: env(safe-area-inset-bottom); }
   .screen::-webkit-scrollbar { display: none; }
   .screen { scrollbar-width: none; }
 
-  .header {
-    padding: 32px var(--pad) 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    position: relative;
-  }
+  /* HEADER (home & tab destinations) */
   .topbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 22px;
-    height: 32px;
+    padding: 22px var(--pad) 8px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: relative;
+    z-index: 2;
   }
-  .brand {
-    display: inline-flex;
-    align-items: center;
-    gap: 9px;
-  }
+  .brand { display: flex; align-items: center; gap: 10px; }
   .brand-mark {
-    width: 30px; height: 30px;
-    border-radius: 9px;
+    width: 34px; height: 34px;
+    border-radius: 11px;
     background: var(--accent);
-    color: #0a1410;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    color: var(--accent-deep);
+    display: inline-flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 18px var(--accent-glow);
   }
-  .brand-mark svg { width: 16px; height: 16px; stroke-width: 2.5; }
+  .brand-mark svg { width: 18px; height: 18px; stroke-width: 2.5; }
   .brand-name {
-    font-size: 14px;
-    font-weight: 600;
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 15px;
     letter-spacing: 0.01em;
   }
-  .version {
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--text-mute);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-  }
   .credit {
-    font-size: 11px;
-    text-decoration: none;
-    padding: 6px 10px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.04);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 7px 11px;
+    border-radius: 999px;
+    background: var(--surface-2);
     border: 1px solid var(--border);
+    text-decoration: none;
     cursor: pointer;
     display: inline-flex;
     align-items: baseline;
@@ -135,116 +141,116 @@
     transition: background 160ms ease, border-color 160ms ease, transform 120ms ease;
   }
   .credit:active { transform: scale(0.94); }
-  .credit:hover .credit-handle { color: var(--accent); }
-  .credit-prefix {
-    color: var(--text-mute);
-    font-weight: 500;
-    letter-spacing: 0.04em;
-  }
-  .credit-handle {
-    color: var(--text-dim);
-    font-weight: 600;
-    transition: color 160ms ease;
-  }
+  .credit:hover .credit-handle { color: var(--accent-bright); }
+  .credit-prefix { color: var(--text-mute); }
+  .credit-handle { color: var(--text-dim); font-weight: 700; transition: color 160ms ease; }
 
-  .header h1 {
+  .hero {
+    padding: 12px var(--pad) 6px;
+    position: relative;
+    z-index: 2;
+  }
+  .hero h1 {
     margin: 0;
-    font-size: 32px;
-    font-weight: 700;
-    letter-spacing: -0.025em;
-    line-height: 1.05;
-  }
-  .header h1 .hl { color: var(--accent); }
-
-  .header .subtitle {
-    color: var(--text-dim);
-    font-size: 15px;
-    font-weight: 400;
-    line-height: 1.4;
-    margin-top: 4px;
-    max-width: 90%;
-  }
-
-  .header.cat { padding-top: 24px; }
-  .header.cat .topbar { margin-bottom: 28px; }
-  .header.cat h1 {
     font-size: 28px;
+    font-weight: 700;
     line-height: 1.1;
+    letter-spacing: -0.015em;
+  }
+  .hero h1 .hl { color: var(--accent-bright); }
+  .hero .subtitle {
+    color: var(--text-dim);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.5;
+    margin-top: 8px;
+    max-width: 95%;
   }
 
-  .back-btn, .icon-btn {
-    width: 38px;
-    height: 38px;
-    border-radius: 11px;
-    background: var(--tile);
-    border: 1px solid var(--border);
-    color: var(--text);
+  /* DRILL-DOWN HEADER (cat list — has back btn) */
+  .header-drill {
+    padding: 22px var(--pad) 8px;
+    position: relative;
+    z-index: 2;
+  }
+  .header-drill .topbar { padding: 0; margin-bottom: 18px; }
+  .header-drill h1 {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+  }
+  .header-drill .subtitle {
+    color: var(--text-dim);
+    font-size: 14px;
+    font-weight: 500;
+    margin-top: 6px;
+  }
+  .back-btn, .ghost-btn {
+    width: 40px; height: 40px;
+    border-radius: 12px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     flex-shrink: 0;
-    transition: transform 120ms ease, background 160ms ease, color 160ms ease;
-    padding: 0;
-  }
-  .back-btn:active, .icon-btn:active {
-    transform: scale(0.92);
-    background: var(--tile-2);
-  }
-  .back-btn svg, .icon-btn svg { width: 18px; height: 18px; stroke-width: 2.2; }
-  .icon-btn.on { color: var(--accent); }
-  .icon-btn.on svg { fill: currentColor; }
-
-  .ghost-btn {
-    width: 38px; height: 38px;
-    border-radius: 11px;
-    background: transparent;
     border: 1px solid var(--border);
-    color: var(--text-dim);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    background: var(--surface-2);
+    color: var(--text);
+    padding: 0;
+    transition: transform 120ms ease, background 160ms ease;
+  }
+  .ghost-btn {
+    background: var(--accent-soft);
+    color: var(--accent-bright);
     cursor: default;
   }
-  .ghost-btn svg { width: 17px; height: 17px; stroke-width: 2; }
+  .back-btn:active { transform: scale(0.92); background: var(--surface-3); }
+  .back-btn svg, .ghost-btn svg { width: 18px; height: 18px; stroke-width: 2.2; }
 
-  /* Search */
+  /* SEARCH */
   .search-wrap {
     position: relative;
-    padding: 8px var(--pad) 0;
+    padding: 14px var(--pad) 0;
+    z-index: 2;
   }
   .search-input {
     width: 100%;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 12px 40px 12px 42px;
-    font-size: 15px;
+    border-radius: 999px;
+    padding: 13px 42px 13px 44px;
+    font-size: 14px;
+    font-weight: 500;
     color: var(--text);
     font-family: inherit;
     outline: none;
-    transition: border-color 160ms ease;
+    transition: border-color 200ms ease, box-shadow 200ms ease;
   }
   .search-input::placeholder { color: var(--text-mute); }
-  .search-input:focus { border-color: var(--accent); }
+  .search-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-soft);
+  }
   .search-icon {
     position: absolute;
-    left: calc(var(--pad) + 14px);
+    left: calc(var(--pad) + 16px);
     top: 50%;
     transform: translateY(-50%);
     color: var(--text-mute);
-    pointer-events: none;
     display: inline-flex;
+    pointer-events: none;
   }
   .search-icon svg { width: 17px; height: 17px; stroke-width: 2; }
   .search-clear {
     position: absolute;
-    right: calc(var(--pad) + 8px);
+    right: calc(var(--pad) + 10px);
     top: 50%;
     transform: translateY(-50%);
     width: 26px; height: 26px;
-    border-radius: 8px;
-    background: var(--tile-2);
+    border-radius: 999px;
+    background: var(--surface-3);
     border: none;
     color: var(--text-dim);
     display: none;
@@ -254,132 +260,194 @@
     padding: 0;
   }
   .search-clear.show { display: inline-flex; }
-  .search-clear svg { width: 14px; height: 14px; stroke-width: 2.2; }
+  .search-clear svg { width: 13px; height: 13px; stroke-width: 2.4; }
 
+  /* HERO PROMO CARD (hidden by default — show via showHeroPromo()) */
+  .hero-card {
+    margin: 16px var(--pad) 0;
+    border-radius: var(--radius-card);
+    padding: 18px;
+    background: linear-gradient(135deg, rgba(61, 220, 151, 0.16), rgba(61, 220, 151, 0.04));
+    border: 1px solid var(--border-strong);
+    box-shadow: 0 0 32px rgba(61, 220, 151, 0.10);
+    display: flex; align-items: center; gap: 14px;
+    position: relative;
+    cursor: pointer;
+    transition: transform 120ms ease, opacity 120ms ease;
+    z-index: 2;
+  }
+  .hero-card[hidden] { display: none; }
+  .hero-card:active { transform: scale(0.985); opacity: 0.92; }
+  .hero-badge {
+    position: absolute;
+    top: 12px; right: 12px;
+    background: var(--accent);
+    color: var(--accent-deep);
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .hero-tile {
+    width: 52px; height: 52px;
+    border-radius: 16px;
+    background: var(--accent);
+    color: var(--accent-deep);
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 0 18px var(--accent-glow);
+  }
+  .hero-tile svg { width: 26px; height: 26px; stroke-width: 2.2; }
+  .hero-body { flex: 1; min-width: 0; }
+  .hero-label { font-size: 10px; font-weight: 700; color: var(--text-mute); letter-spacing: 0.10em; text-transform: uppercase; }
+  .hero-name { font-size: 17px; font-weight: 700; color: var(--text); margin-top: 4px; line-height: 1.2; }
+  .hero-meta { font-size: 12px; font-weight: 500; color: var(--text-dim); margin-top: 3px; }
+
+  /* SECTION LABEL */
   .section-label {
-    padding: 18px var(--pad) 10px;
-    font-size: 12px;
-    font-weight: 600;
+    padding: 22px var(--pad) 14px;
+    font-size: 11px;
+    font-weight: 700;
     color: var(--text-mute);
-    letter-spacing: 0.14em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    position: relative;
+    z-index: 2;
   }
   .section-label .count {
-    color: var(--accent);
-    font-weight: 600;
-    letter-spacing: 0.08em;
+    color: var(--accent-bright);
+    font-weight: 700;
+    letter-spacing: 0.06em;
   }
 
-  /* Favorites quick link on home */
-  .fav-quick {
-    margin: 4px var(--pad) 0;
-    padding: 14px 16px;
-    background: linear-gradient(135deg, rgba(61, 220, 151, 0.12), rgba(61, 220, 151, 0.02));
-    border: 1px solid rgba(61, 220, 151, 0.22);
-    border-radius: 16px;
-    display: none;
-    align-items: center;
-    gap: 14px;
-    cursor: pointer;
-    transition: transform 120ms ease, opacity 120ms ease;
-  }
-  .fav-quick.show { display: flex; }
-  .fav-quick:active { transform: scale(0.985); opacity: 0.9; }
-  .fav-quick .cat-tile { background: var(--accent); color: #0a1410; }
-  .fav-quick .cat-tile svg { fill: currentColor; }
-
+  /* CATEGORY GRID (4 columns) */
   .cat-grid {
+    padding: 0 16px 24px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    position: relative;
+    z-index: 1;
+  }
+  .cat-tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-tile);
+    padding: 14px 6px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+    cursor: pointer;
+    min-height: 108px;
+    transition: transform 120ms ease, background 160ms ease, border-color 200ms ease, box-shadow 200ms ease;
+    overflow: hidden;
+  }
+  .cat-tile:active {
+    transform: scale(0.96);
+    background: var(--surface-2);
+    border-color: var(--border-strong);
+    box-shadow: 0 0 18px rgba(61, 220, 151, 0.12);
+  }
+  .cat-tile-icon {
+    width: 44px; height: 44px;
+    border-radius: 13px;
+    background: var(--accent-soft);
+    color: var(--accent-bright);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .cat-tile-icon svg { width: 22px; height: 22px; stroke-width: 2; }
+  .cat-tile-name {
+    font-size: 10.5px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--text);
+    width: 100%;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    hyphens: none;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* LOCATION LIST */
+  .loc-list {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    padding: 4px var(--pad) 32px;
+    padding: 4px var(--pad) 24px;
+    position: relative;
+    z-index: 1;
   }
-  .cat-card, .loc-card {
+  .loc-card {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 16px 16px;
+    border-radius: var(--radius-card);
+    padding: 16px;
     display: flex;
-    flex-direction: row;
     align-items: center;
     gap: 14px;
     cursor: pointer;
     position: relative;
-    transition: transform 120ms ease, opacity 120ms ease, background 160ms ease, border-color 160ms ease;
+    transition: transform 120ms ease, background 160ms ease, border-color 200ms ease, box-shadow 200ms ease;
     overflow: hidden;
   }
-  .cat-card:active, .loc-card:active {
-    transform: scale(0.985);
-    opacity: 0.9;
+  .loc-card:active {
+    transform: scale(0.98);
     background: var(--surface-2);
+    border-color: var(--border-strong);
+    box-shadow: 0 0 20px rgba(61, 220, 151, 0.10);
   }
-  .cat-tile, .loc-tile {
-    width: 44px; height: 44px;
+  .loc-tile {
+    width: 42px; height: 42px;
     border-radius: 12px;
-    background: var(--tile);
-    color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent-bright);
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    border: 1px solid var(--border);
     flex-shrink: 0;
   }
-  .loc-tile { width: 42px; height: 42px; }
-  .cat-tile svg { width: 22px; height: 22px; stroke-width: 1.75; }
-  .loc-tile svg { width: 20px; height: 20px; stroke-width: 1.75; }
-
-  .cat-body, .loc-body {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
+  .loc-tile svg { width: 20px; height: 20px; stroke-width: 2; }
+  .loc-body {
+    flex: 1; min-width: 0;
+    display: flex; flex-direction: column;
+    gap: 2px;
   }
-  .cat-name, .loc-name {
-    font-size: 16px;
-    font-weight: 600;
-    line-height: 1.2;
-    letter-spacing: -0.01em;
+  .loc-name {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.3;
     color: var(--text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .loc-name { font-size: 15px; letter-spacing: -0.005em; line-height: 1.3; }
-  .cat-count, .loc-num {
-    font-size: 13px;
-    font-weight: 400;
-    color: var(--text-dim);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
   .loc-num {
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 600;
     color: var(--text-mute);
-    letter-spacing: 0.06em;
+    letter-spacing: 0.04em;
     font-feature-settings: 'tnum';
-  }
-  .cat-count .dot {
-    width: 4px; height: 4px;
-    border-radius: 50%;
-    background: var(--accent);
-    display: inline-block;
-  }
-
-  .loc-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 4px var(--pad) 40px;
   }
 
   .fav-btn {
-    width: 36px; height: 36px;
-    border-radius: 10px;
+    width: 38px; height: 38px;
+    border-radius: 12px;
     background: transparent;
     border: 1px solid var(--border);
     color: var(--text-mute);
@@ -388,19 +456,19 @@
     justify-content: center;
     cursor: pointer;
     flex-shrink: 0;
-    transition: color 160ms ease, background 160ms ease, transform 120ms ease, border-color 160ms ease;
+    transition: color 160ms ease, background 160ms ease, transform 120ms ease, border-color 160ms ease, box-shadow 200ms ease;
     padding: 0;
   }
   .fav-btn:active { transform: scale(0.88); }
   .fav-btn.on {
-    color: var(--accent);
-    background: var(--accent-glow);
-    border-color: transparent;
+    color: var(--accent-bright);
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    box-shadow: 0 0 14px var(--accent-glow);
   }
-  .fav-btn svg { width: 17px; height: 17px; stroke-width: 2; }
+  .fav-btn svg { width: 17px; height: 17px; stroke-width: 2.2; }
   .fav-btn.on svg { fill: currentColor; }
-
-  .cat-arrow, .loc-arrow {
+  .loc-arrow {
     width: 28px; height: 28px;
     color: var(--text-mute);
     display: inline-flex;
@@ -409,32 +477,101 @@
     flex-shrink: 0;
     transition: transform 160ms ease, color 160ms ease;
   }
-  .cat-arrow svg, .loc-arrow svg { width: 16px; height: 16px; stroke-width: 2; }
-  .cat-card:active .cat-arrow,
+  .loc-arrow svg { width: 17px; height: 17px; stroke-width: 2.4; }
   .loc-card:active .loc-arrow {
-    color: var(--accent);
-    transform: translateX(3px);
+    color: var(--accent-bright);
+    transform: translateX(4px);
   }
 
+  /* EMPTY STATES */
   .empty-state {
     text-align: center;
-    padding: 56px 20px 40px;
+    padding: 60px 20px 40px;
     color: var(--text-mute);
     font-size: 14px;
     line-height: 1.5;
+    font-weight: 500;
   }
   .empty-state .empty-ico {
-    width: 48px; height: 48px;
-    margin: 0 auto 14px;
-    border-radius: 14px;
-    background: var(--tile);
+    width: 56px; height: 56px;
+    margin: 0 auto 16px;
+    border-radius: 18px;
+    background: var(--surface);
     color: var(--text-mute);
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    border: 1px solid var(--border);
   }
-  .empty-state .empty-ico svg { width: 22px; height: 22px; stroke-width: 1.75; }
+  .empty-state .empty-ico svg { width: 24px; height: 24px; stroke-width: 1.75; }
 
+  /* CONTACT FORM */
+  .contact-form {
+    padding: 16px var(--pad) 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    position: relative;
+    z-index: 2;
+  }
+  .contact-textarea {
+    width: 100%;
+    min-height: 150px;
+    padding: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.5;
+    resize: vertical;
+    outline: none;
+    transition: border-color 200ms ease, box-shadow 200ms ease;
+  }
+  .contact-textarea::placeholder { color: var(--text-mute); }
+  .contact-textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-soft);
+  }
+  .contact-send-btn {
+    width: 100%;
+    padding: 15px;
+    background: var(--accent-bright);
+    color: var(--accent-deep);
+    border: none;
+    border-radius: 999px;
+    font-weight: 700;
+    font-family: inherit;
+    font-size: 15px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    cursor: pointer;
+    box-shadow: 0 0 24px var(--accent-glow);
+    transition: transform 120ms ease, opacity 160ms ease;
+  }
+  .contact-send-btn:active { transform: scale(0.985); }
+  .contact-send-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  .contact-send-btn svg { width: 18px; height: 18px; stroke-width: 2.4; }
+  .contact-status {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.45;
+    padding: 0 6px;
+    min-height: 20px;
+  }
+  .contact-status.success { color: var(--accent-bright); }
+  .contact-status.error   { color: var(--error); }
+  .contact-status.pending { color: var(--text-dim); }
+
+  /* LOADER */
   .loader {
     position: fixed;
     inset: 0;
@@ -447,14 +584,16 @@
   }
   .loader.hide { opacity: 0; pointer-events: none; }
   .spinner {
-    width: 32px; height: 32px;
+    width: 36px; height: 36px;
     border: 3px solid var(--border-strong);
-    border-top-color: var(--accent);
+    border-top-color: var(--accent-bright);
     border-radius: 50%;
     animation: spin 700ms linear infinite;
+    box-shadow: 0 0 20px var(--accent-glow);
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* ERROR */
   .error-state {
     padding: 60px var(--pad) 40px;
     text-align: center;
@@ -462,169 +601,124 @@
   }
   .error-state h3 {
     color: var(--text);
-    font-size: 18px;
-    margin: 12px 0 6px;
-    font-weight: 600;
+    font-size: 19px;
+    margin: 14px 0 7px;
+    font-weight: 700;
   }
   .error-state p {
     font-size: 14px;
-    margin: 0 0 18px;
+    margin: 0 0 20px;
     color: var(--text-mute);
   }
   .error-state .retry {
-    padding: 11px 22px;
-    background: var(--accent);
-    color: #0a1410;
+    padding: 13px 28px;
+    background: var(--accent-bright);
+    color: var(--accent-deep);
     border: none;
-    border-radius: 11px;
-    font-weight: 600;
+    border-radius: 999px;
+    font-weight: 700;
     font-family: inherit;
     font-size: 14px;
     cursor: pointer;
+    box-shadow: 0 0 24px var(--accent-glow);
   }
 
-  /* ========== Contact CTA + form ========== */
-  .cta-wrap { padding: 12px var(--pad) 4px; }
-  .cta-card {
-    background: linear-gradient(135deg, rgba(61, 220, 151, 0.14), rgba(61, 220, 151, 0.03));
-    border: 1px solid rgba(61, 220, 151, 0.24);
-    border-radius: 16px;
-    padding: 16px;
+  /* BOTTOM TAB BAR */
+  .tab-bar {
+    position: fixed;
+    bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+    background: rgba(12, 20, 27, 0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    padding: 10px 14px calc(14px + env(safe-area-inset-bottom));
     display: flex;
-    align-items: center;
-    gap: 14px;
-    cursor: pointer;
-    transition: transform 120ms ease, opacity 120ms ease;
+    justify-content: space-around;
+    z-index: 50;
+    transition: transform 240ms cubic-bezier(0.4, 0, 0.2, 1), opacity 200ms ease;
   }
-  .cta-card:active { transform: scale(0.985); opacity: 0.9; }
-  .cta-tile {
-    width: 44px; height: 44px;
-    border-radius: 12px;
-    background: var(--accent);
-    color: #0a1410;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
+  .tab-bar.hidden {
+    transform: translateX(-50%) translateY(100%);
+    opacity: 0;
+    pointer-events: none;
   }
-  .cta-tile svg { width: 22px; height: 22px; stroke-width: 2; }
-  .cta-body {
+  .tab-btn {
     flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-  .cta-name { font-size: 16px; font-weight: 600; line-height: 1.2; color: var(--text); }
-  .cta-sub  { font-size: 13px; font-weight: 400; color: var(--text-dim); }
-
-  .contact-form {
-    padding: 12px var(--pad) 40px;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-  }
-  .contact-textarea {
-    width: 100%;
-    min-height: 140px;
-    padding: 14px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    color: var(--text);
-    font-family: inherit;
-    font-size: 15px;
-    line-height: 1.45;
-    resize: vertical;
-    outline: none;
-    transition: border-color 160ms ease;
-  }
-  .contact-textarea::placeholder { color: var(--text-mute); }
-  .contact-textarea:focus { border-color: var(--accent); }
-  .contact-send-btn {
-    width: 100%;
-    padding: 14px;
-    background: var(--accent);
-    color: #0a1410;
     border: none;
-    border-radius: 14px;
-    font-weight: 600;
-    font-family: inherit;
-    font-size: 15px;
-    display: inline-flex;
+    background: transparent;
+    color: var(--text-mute);
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 8px;
+    gap: 5px;
+    padding: 8px 4px;
+    border-radius: 14px;
     cursor: pointer;
-    transition: transform 120ms ease, opacity 160ms ease;
+    font-family: inherit;
+    transition: color 160ms ease, background 160ms ease, transform 120ms ease;
   }
-  .contact-send-btn:active { transform: scale(0.985); }
-  .contact-send-btn:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
+  .tab-btn:active { transform: scale(0.94); }
+  .tab-btn.active {
+    color: var(--accent-bright);
+    background: var(--accent-soft);
   }
-  .contact-send-btn svg { width: 18px; height: 18px; stroke-width: 2.2; }
-  .contact-status {
-    font-size: 14px;
-    line-height: 1.45;
-    padding: 0 4px;
-    min-height: 20px;
+  .tab-btn svg { width: 22px; height: 22px; stroke-width: 2; }
+  .tab-btn.active svg { stroke-width: 2.5; }
+  .tab-btn span {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
   }
-  .contact-status.success { color: var(--accent); }
-  .contact-status.error   { color: #ff7e7e; }
-  .contact-status.pending { color: var(--text-dim); }
 
-  body.tg { background: #1d1e33; }
+  body.tg { background: var(--bg); }
 </style>
 </head>
 <body>
   <div id="app">
 
-    <!-- ============ HOME ============ -->
+    <!-- ============ HOME (Asosiy tab) ============ -->
     <section class="screen active" id="screen-home">
-      <header class="header home">
-        <div class="topbar">
-          <div class="brand">
-            <span class="brand-mark"><i data-lucide="map-pin"></i></span>
-            <span class="brand-name">Lokatsiyalar</span>
-          </div>
-          <a class="credit" id="credit-link" href="https://t.me/zayd_usamah" aria-label="Bot ishlab chiquvchisi">
-            <span class="credit-prefix">Ishlab chiqdi:</span>
-            <span class="credit-handle">@zayd_usamah</span>
-          </a>
+      <div class="topbar">
+        <div class="brand">
+          <span class="brand-mark"><i data-lucide="map-pin"></i></span>
+          <span class="brand-name">Lokatsiyalar</span>
         </div>
-        <h1>Kerakli joyni<br><span class="hl">toping</span></h1>
-        <div class="subtitle">Kategoriyani tanlang yoki qidiruvdan foydalaning</div>
-      </header>
+        <a class="credit" id="credit-link" href="https://t.me/zayd_usamah" aria-label="Bot ishlab chiquvchisi">
+          <span class="credit-prefix">Ishlab chiqdi:</span>
+          <span class="credit-handle">@zayd_usamah</span>
+        </a>
+      </div>
 
-      <div class="cta-wrap">
-        <div class="cta-card" id="contact-cta">
-          <span class="cta-tile"><i data-lucide="message-circle"></i></span>
-          <div class="cta-body">
-            <div class="cta-name">Biz bilan bog'laning</div>
-            <div class="cta-sub">Savol yoki taklif bormi? Yozing</div>
-          </div>
-          <span class="cat-arrow"><i data-lucide="chevron-right"></i></span>
+      <div class="hero">
+        <h1>Xush kelibsiz! 👋<br><span class="hl">Kerakli joyni toping</span></h1>
+        <div class="subtitle">Kategoriyani tanlang yoki qidiruvdan foydalaning</div>
+      </div>
+
+      <!-- Hero promo / news / "Bugun mashhur" — keep hidden until content is ready.
+           Use showHeroPromo({ badge, label, name, meta, icon, onClick }) to fill and unhide.
+           Use hideHeroPromo() to hide. -->
+      <div class="hero-card" id="hero-promo" hidden>
+        <div class="hero-badge" id="hero-promo-badge">Yangi</div>
+        <div class="hero-tile"><i data-lucide="megaphone" id="hero-promo-icon"></i></div>
+        <div class="hero-body">
+          <div class="hero-label" id="hero-promo-label">PROMO</div>
+          <div class="hero-name" id="hero-promo-name">Tez orada</div>
+          <div class="hero-meta" id="hero-promo-meta"></div>
         </div>
       </div>
 
       <div class="search-wrap">
         <span class="search-icon"><i data-lucide="search"></i></span>
-        <input class="search-input" id="home-search" type="text" inputmode="search" autocomplete="off" placeholder="Qidirish: joy yoki kategoriya">
+        <input class="search-input" id="home-search" type="text" inputmode="search" autocomplete="off" placeholder="Joy yoki kategoriya qidirish...">
         <button class="search-clear" id="home-search-clear" aria-label="Tozalash"><i data-lucide="x"></i></button>
       </div>
 
-      <div class="fav-quick" id="fav-quick">
-        <span class="cat-tile"><i data-lucide="star"></i></span>
-        <div class="cat-body">
-          <div class="cat-name">Sevimlilar</div>
-          <div class="cat-count"><span class="dot"></span><span id="fav-quick-count">0</span> ta joy</div>
-        </div>
-        <span class="cat-arrow"><i data-lucide="chevron-right"></i></span>
-      </div>
-
-      <div class="section-label" id="home-section-label">
-        <span id="home-section-title">Kategoriyalar</span>
+      <div class="section-label">
+        <span id="home-section-title">Toifalar</span>
         <span class="count" id="cat-total"></span>
       </div>
 
@@ -636,9 +730,9 @@
       </div>
     </section>
 
-    <!-- ============ LIST (category or favorites) ============ -->
-    <section class="screen enter-right" id="screen-list" aria-hidden="true">
-      <header class="header cat">
+    <!-- ============ CAT LIST (drill-down) ============ -->
+    <section class="screen" id="screen-list" aria-hidden="true">
+      <div class="header-drill">
         <div class="topbar">
           <button class="back-btn" id="back-btn" aria-label="Orqaga">
             <i data-lucide="arrow-left"></i>
@@ -649,7 +743,7 @@
         </div>
         <h1 id="list-title">—</h1>
         <div class="subtitle" id="list-sub">— ta joy</div>
-      </header>
+      </div>
 
       <div class="search-wrap">
         <span class="search-icon"><i data-lucide="search"></i></span>
@@ -657,9 +751,7 @@
         <button class="search-clear" id="list-search-clear" aria-label="Tozalash"><i data-lucide="x"></i></button>
       </div>
 
-      <div class="section-label">
-        <span>Joylar</span>
-      </div>
+      <div class="section-label"><span>Joylar</span></div>
 
       <div class="loc-list" id="loc-list"></div>
       <div class="empty-state" id="list-empty" style="display:none">
@@ -668,20 +760,46 @@
       </div>
     </section>
 
-    <!-- ============ CONTACT ============ -->
-    <section class="screen enter-right" id="screen-contact" aria-hidden="true">
-      <header class="header cat">
-        <div class="topbar">
-          <button class="back-btn" id="contact-back-btn" aria-label="Orqaga">
-            <i data-lucide="arrow-left"></i>
-          </button>
-          <span class="ghost-btn" aria-hidden="true">
-            <i data-lucide="message-circle"></i>
-          </span>
+    <!-- ============ FAVORITES (Sevimli tab) ============ -->
+    <section class="screen" id="screen-fav" aria-hidden="true">
+      <div class="topbar">
+        <div class="brand">
+          <span class="brand-mark"><i data-lucide="star"></i></span>
+          <span class="brand-name">Sevimlilar</span>
         </div>
+      </div>
+      <div class="hero">
+        <h1>Sizning <span class="hl">sevimlilaringiz</span></h1>
+        <div class="subtitle" id="fav-sub">— ta joy</div>
+      </div>
+
+      <div class="search-wrap">
+        <span class="search-icon"><i data-lucide="search"></i></span>
+        <input class="search-input" id="fav-search" type="text" inputmode="search" autocomplete="off" placeholder="Sevimlilar ichida qidirish">
+        <button class="search-clear" id="fav-search-clear" aria-label="Tozalash"><i data-lucide="x"></i></button>
+      </div>
+
+      <div class="section-label"><span>Joylar</span></div>
+
+      <div class="loc-list" id="fav-list"></div>
+      <div class="empty-state" id="fav-empty" style="display:none">
+        <span class="empty-ico"><i data-lucide="star-off"></i></span>
+        <div>Sevimli joylaringiz yo'q.<br>Joyni saqlash uchun ⭐ tugmasini bosing.</div>
+      </div>
+    </section>
+
+    <!-- ============ CONTACT (Aloqa tab) ============ -->
+    <section class="screen" id="screen-contact" aria-hidden="true">
+      <div class="topbar">
+        <div class="brand">
+          <span class="brand-mark"><i data-lucide="message-circle"></i></span>
+          <span class="brand-name">Aloqa</span>
+        </div>
+      </div>
+      <div class="hero">
         <h1>Biz bilan<br><span class="hl">bog'laning</span></h1>
         <div class="subtitle">Savol, taklif yoki shikoyatni yozing — admin tez orada javob beradi</div>
-      </header>
+      </div>
 
       <div class="contact-form">
         <textarea id="contact-message" class="contact-textarea" placeholder="Xabaringizni shu yerga yozing..." rows="6"></textarea>
@@ -699,9 +817,9 @@
     </div>
 
     <!-- ============ ERROR ============ -->
-    <section class="screen" id="screen-error" style="display:none">
+    <section class="screen no-tabs" id="screen-error" style="display:none">
       <div class="error-state">
-        <span class="empty-ico" style="background:var(--tile);color:var(--text-mute);width:56px;height:56px;border-radius:16px;display:inline-flex;align-items:center;justify-content:center">
+        <span class="empty-ico" style="background:var(--surface);color:var(--text-mute);width:60px;height:60px;border-radius:18px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border)">
           <i data-lucide="cloud-off"></i>
         </span>
         <h3>Yuklab bo'lmadi</h3>
@@ -710,14 +828,30 @@
       </div>
     </section>
 
+    <!-- ============ BOTTOM TAB BAR ============ -->
+    <nav class="tab-bar" id="tab-bar">
+      <button class="tab-btn active" data-tab="home" aria-label="Asosiy">
+        <i data-lucide="home"></i>
+        <span>Asosiy</span>
+      </button>
+      <button class="tab-btn" data-tab="fav" aria-label="Sevimli">
+        <i data-lucide="star"></i>
+        <span>Sevimli</span>
+      </button>
+      <button class="tab-btn" data-tab="contact" aria-label="Aloqa">
+        <i data-lucide="message-circle"></i>
+        <span>Aloqa</span>
+      </button>
+    </nav>
+
   </div>
 
 <script>
   /* =========================================================
      CONFIG
-     - Set API_URL to your deployed backend URL (HTTPS) when ready.
-       Leave empty until backend is up; the contact form will show
-       a friendly error in that case.
+     - API_URL: HTTPS root of your bot backend (sslip.io or domain).
+     - Hero promo card on home is hidden until you call showHeroPromo().
+       See window.showHeroPromo / window.hideHeroPromo below for shape.
      ========================================================= */
   const CONFIG = {
     API_URL: 'https://167-86-125-229.sslip.io',
@@ -732,8 +866,8 @@
       tg.ready();
       tg.expand();
       document.body.classList.add('tg');
-      try { tg.setHeaderColor && tg.setHeaderColor('#1d1e33'); } catch (e) {}
-      try { tg.setBackgroundColor && tg.setBackgroundColor('#1d1e33'); } catch (e) {}
+      try { tg.setHeaderColor && tg.setHeaderColor('#0c141b'); } catch (e) {}
+      try { tg.setBackgroundColor && tg.setBackgroundColor('#0c141b'); } catch (e) {}
     } catch (e) {}
   }
 
@@ -757,19 +891,17 @@
     favs: loadFavs(),
     homeQuery: '',
     listQuery: '',
+    favQuery: '',
   };
 
   function loadFavs() {
     try {
       const raw = localStorage.getItem(FAVS_KEY);
       return new Set(raw ? JSON.parse(raw) : []);
-    } catch (e) {
-      return new Set();
-    }
+    } catch (e) { return new Set(); }
   }
   function saveFavs() {
-    try { localStorage.setItem(FAVS_KEY, JSON.stringify([...state.favs])); }
-    catch (e) {}
+    try { localStorage.setItem(FAVS_KEY, JSON.stringify([...state.favs])); } catch (e) {}
   }
   function favKey(loc) { return loc.url; }
   function isFav(loc) { return state.favs.has(favKey(loc)); }
@@ -780,10 +912,7 @@
     saveFavs();
     syncFavToggleToServer(k);
   }
-
-  function apiAvailable() {
-    return !!(CONFIG.API_URL && tg && tg.initData);
-  }
+  function apiAvailable() { return !!(CONFIG.API_URL && tg && tg.initData); }
 
   async function syncFavsFromServer() {
     if (!apiAvailable()) return;
@@ -795,16 +924,12 @@
       });
       if (!res.ok) return;
       const data = await res.json();
-      const serverSet = new Set(data.favorites || []);
-      // Server is source of truth; replace local
-      state.favs = serverSet;
+      state.favs = new Set(data.favorites || []);
       saveFavs();
-      // Re-render relevant screens to reflect server state
       if (currentView.screen === 'home') renderHome();
-      else if (currentView.screen === 'list' && currentView.mode === 'fav') renderList(currentView);
-    } catch (e) { /* silent: stay on local cache */ }
+      else if (isFavView(currentView)) renderFav();
+    } catch (e) {}
   }
-
   async function syncFavToggleToServer(url) {
     if (!apiAvailable()) return;
     try {
@@ -813,18 +938,17 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ initData: tg.initData, url }),
       });
-    } catch (e) { /* silent: optimistic UI already updated, will reconcile on next load */ }
+    } catch (e) {}
   }
-
   function trackEvent(event, target) {
     if (!apiAvailable()) return;
-    // Fire and forget; never block UI on analytics
     fetch(`${CONFIG.API_URL.replace(/\/$/, '')}/api/track`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ initData: tg.initData, event, target: target || '' }),
     }).catch(() => {});
   }
+
   function getAllFavLocations() {
     const out = [];
     if (!state.catalog) return out;
@@ -837,16 +961,17 @@
   }
 
   /* =========================================================
-     Routing (hash-based)
+     Routing
      Routes:
-       (empty)        -> home
-       #cat=<id>      -> list, category mode
-       #fav           -> list, favorites mode
+       (empty / #home) -> Asosiy tab (categories grid)
+       #fav            -> Sevimli tab (favorites list)
+       #contact        -> Aloqa tab (contact form)
+       #cat=<id>       -> drill-down: category's location list
      ========================================================= */
   function parseHash() {
     const h = location.hash.replace(/^#/, '');
-    if (!h) return { screen: 'home' };
-    if (h === 'fav')     return { screen: 'list', mode: 'fav' };
+    if (!h || h === 'home') return { screen: 'home' };
+    if (h === 'fav')     return { screen: 'fav' };
     if (h === 'contact') return { screen: 'contact' };
     const params = new URLSearchParams(h);
     const cat = params.get('cat');
@@ -859,12 +984,17 @@
   function setRoute(view, { replace = false } = {}) {
     const target =
       view.screen === 'home'    ? '' :
+      view.screen === 'fav'     ? '#fav' :
       view.screen === 'contact' ? '#contact' :
-      view.mode === 'fav'       ? '#fav' :
-                                  `#cat=${encodeURIComponent(view.id)}`;
+      view.screen === 'list'    ? `#cat=${encodeURIComponent(view.id)}` : '';
     const url = location.pathname + location.search + target;
     if (replace) history.replaceState(null, '', url);
     else if ((location.hash || '') !== target) location.hash = target;
+  }
+
+  function isFavView(view) { return view.screen === 'fav'; }
+  function isTopLevel(view) {
+    return view.screen === 'home' || view.screen === 'fav' || view.screen === 'contact';
   }
 
   /* =========================================================
@@ -872,9 +1002,11 @@
      ========================================================= */
   const screenHome    = document.getElementById('screen-home');
   const screenList    = document.getElementById('screen-list');
+  const screenFav     = document.getElementById('screen-fav');
   const screenContact = document.getElementById('screen-contact');
   const screenError   = document.getElementById('screen-error');
   const loaderEl      = document.getElementById('loader');
+  const tabBarEl      = document.getElementById('tab-bar');
 
   const grid             = document.getElementById('cat-grid');
   const homeSearchResults = document.getElementById('home-search-results');
@@ -883,8 +1015,6 @@
   const catTotal         = document.getElementById('cat-total');
   const homeSearchInput  = document.getElementById('home-search');
   const homeSearchClear  = document.getElementById('home-search-clear');
-  const favQuick         = document.getElementById('fav-quick');
-  const favQuickCount    = document.getElementById('fav-quick-count');
 
   const backBtn          = document.getElementById('back-btn');
   const listTitle        = document.getElementById('list-title');
@@ -896,8 +1026,14 @@
   const listSearchInput  = document.getElementById('list-search');
   const listSearchClear  = document.getElementById('list-search-clear');
 
+  const favSub          = document.getElementById('fav-sub');
+  const favList         = document.getElementById('fav-list');
+  const favEmpty        = document.getElementById('fav-empty');
+  const favSearchInput  = document.getElementById('fav-search');
+  const favSearchClear  = document.getElementById('fav-search-clear');
+
   /* =========================================================
-     Render
+     Render helpers
      ========================================================= */
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, c => ({
@@ -905,42 +1041,85 @@
     }[c]));
   }
   function refreshIcons() { if (window.lucide) lucide.createIcons(); }
-  function matches(text, q) {
-    return text.toLowerCase().includes(q.toLowerCase());
+  function matches(text, q) { return text.toLowerCase().includes(q.toLowerCase()); }
+
+  function locCardHtml(loc, i, { showCat = false } = {}) {
+    const fav = isFav(loc);
+    const subLine = showCat
+      ? `<div class="loc-num">${escapeHtml(loc._catName || '')}</div>`
+      : `<div class="loc-num">№ ${String(i + 1).padStart(2, '0')}</div>`;
+    return `
+      <div class="loc-card" data-key="${escapeHtml(favKey(loc))}">
+        <span class="loc-tile"><i data-lucide="${escapeHtml(loc._icon || 'map-pin')}"></i></span>
+        <div class="loc-body">
+          <div class="loc-name">${escapeHtml(loc.name)}</div>
+          ${subLine}
+        </div>
+        <button class="fav-btn ${fav ? 'on' : ''}" data-fav data-key="${escapeHtml(favKey(loc))}" aria-label="Sevimli">
+          <i data-lucide="star"></i>
+        </button>
+        <span class="loc-arrow"><i data-lucide="chevron-right"></i></span>
+      </div>`;
+  }
+  function bindLocCards(container, items) {
+    const byKey = new Map(items.map(it => [favKey(it), it]));
+    container.querySelectorAll('.loc-card').forEach(card => {
+      const loc = byKey.get(card.dataset.key);
+      if (!loc) return;
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('[data-fav]')) return;
+        haptic('light');
+        openLocation(loc);
+      });
+      const favBtn = card.querySelector('[data-fav]');
+      if (favBtn) {
+        favBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          haptic('select');
+          toggleFav(loc);
+          favBtn.classList.toggle('on', isFav(loc));
+        });
+      }
+    });
   }
 
+  function openLocation(loc) {
+    const url = loc && loc.url;
+    if (!url) return;
+    trackEvent('location', url);
+    const isTelegramLink = /^https?:\/\/t\.me\//i.test(url);
+    try {
+      if (isTelegramLink && tg && tg.openTelegramLink) { tg.openTelegramLink(url); return; }
+      if (tg && tg.openLink) { tg.openLink(url); return; }
+      window.open(url, '_blank');
+    } catch (e) {
+      try { window.open(url, '_blank'); } catch (_) {}
+    }
+  }
+
+  /* =========================================================
+     Render: HOME (Asosiy)
+     ========================================================= */
   function renderHome() {
     const q = state.homeQuery.trim();
     const ids = Object.keys(state.catalog);
     catTotal.textContent = String(ids.length).padStart(2, '0');
-
-    // favorites quick link
-    const favCount = getAllFavLocations().length;
-    favQuickCount.textContent = String(favCount);
-    favQuick.classList.toggle('show', favCount > 0 && q === '');
-
     homeSearchClear.classList.toggle('show', q.length > 0);
 
     if (q === '') {
-      // Default: category list
-      homeSectionTitle.textContent = 'Kategoriyalar';
+      homeSectionTitle.textContent = 'Toifalar';
       homeSearchResults.style.display = 'none';
       homeEmpty.style.display = 'none';
       grid.style.display = '';
       grid.innerHTML = ids.map((id) => {
         const cat = state.catalog[id];
-        const countText = cat.count_label || `${cat.locations.length} ta joy`;
         return `
-          <div class="cat-card" data-id="${escapeHtml(id)}">
-            <span class="cat-tile"><i data-lucide="${escapeHtml(cat.icon)}"></i></span>
-            <div class="cat-body">
-              <div class="cat-name">${escapeHtml(cat.name)}</div>
-              <div class="cat-count"><span class="dot"></span>${escapeHtml(countText)}</div>
-            </div>
-            <span class="cat-arrow"><i data-lucide="chevron-right"></i></span>
+          <div class="cat-tile" data-id="${escapeHtml(id)}">
+            <span class="cat-tile-icon"><i data-lucide="${escapeHtml(cat.icon || 'map-pin')}"></i></span>
+            <div class="cat-tile-name">${escapeHtml(cat.name)}</div>
           </div>`;
       }).join('');
-      grid.querySelectorAll('.cat-card').forEach(card => {
+      grid.querySelectorAll('.cat-tile').forEach(card => {
         card.addEventListener('click', () => {
           haptic('light');
           trackEvent('category', card.dataset.id);
@@ -953,7 +1132,7 @@
         });
       });
     } else {
-      // Search across all locations
+      // Global search across all locations + categories
       homeSectionTitle.textContent = 'Qidiruv natijalari';
       grid.style.display = 'none';
 
@@ -982,90 +1161,18 @@
     refreshIcons();
   }
 
-  function locCardHtml(loc, i, { showCat = false } = {}) {
-    const fav = isFav(loc);
-    const sub = showCat
-      ? `<div class="loc-num">${escapeHtml(loc._catName || '')}</div>`
-      : `<div class="loc-num">№ ${String(i + 1).padStart(2, '0')}</div>`;
-    return `
-      <div class="loc-card" data-key="${escapeHtml(favKey(loc))}">
-        <span class="loc-tile"><i data-lucide="${escapeHtml(loc._icon || 'map-pin')}"></i></span>
-        <div class="loc-body">
-          <div class="loc-name">${escapeHtml(loc.name)}</div>
-          ${sub}
-        </div>
-        <button class="fav-btn ${fav ? 'on' : ''}" data-fav data-key="${escapeHtml(favKey(loc))}" aria-label="Sevimli">
-          <i data-lucide="star"></i>
-        </button>
-        <span class="loc-arrow"><i data-lucide="chevron-right"></i></span>
-      </div>`;
-  }
-
-  function bindLocCards(container, items) {
-    const byKey = new Map(items.map(it => [favKey(it), it]));
-    container.querySelectorAll('.loc-card').forEach(card => {
-      const key = card.dataset.key;
-      const loc = byKey.get(key);
-      if (!loc) return;
-
-      card.addEventListener('click', (e) => {
-        if (e.target.closest('[data-fav]')) return;
-        haptic('light');
-        openLocation(loc);
-      });
-
-      const favBtn = card.querySelector('[data-fav]');
-      if (favBtn) {
-        favBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          haptic('select');
-          toggleFav(loc);
-          favBtn.classList.toggle('on', isFav(loc));
-        });
-      }
-    });
-  }
-
-  function openLocation(loc) {
-    const url = loc && loc.url;
-    if (!url) return;
-    trackEvent('location', url);
-    const isTelegramLink = /^https?:\/\/t\.me\//i.test(url);
-    try {
-      if (isTelegramLink && tg && tg.openTelegramLink) {
-        tg.openTelegramLink(url);
-        return;
-      }
-      if (tg && tg.openLink) {
-        tg.openLink(url);
-        return;
-      }
-      window.open(url, '_blank');
-    } catch (e) {
-      try { window.open(url, '_blank'); } catch (_) {}
-    }
-  }
-
+  /* =========================================================
+     Render: CAT LIST (drill-down)
+     ========================================================= */
   function renderList(view) {
-    let items, title, icon, emptyText, subText;
-    if (view.mode === 'fav') {
-      items = getAllFavLocations();
-      title = 'Sevimlilar';
-      icon = 'star';
-      emptyText = "Sevimli joylaringiz yo'q";
-      subText = `${items.length} ta joy`;
-    } else {
-      const cat = state.catalog[view.id];
-      items = cat.locations.map(l => ({ ...l, _catId: view.id, _icon: l.icon || cat.icon, _catName: cat.name }));
-      title = cat.name;
-      icon = cat.icon;
-      emptyText = 'Hech narsa topilmadi';
-      subText = cat.count_label || `${items.length} ta joy`;
-    }
+    const cat = state.catalog[view.id];
+    if (!cat) return;
+    const items = cat.locations.map(l => ({ ...l, _catId: view.id, _icon: l.icon || cat.icon, _catName: cat.name }));
+    const subText = cat.count_label || `${items.length} ta joy`;
 
-    listTitle.textContent = title;
+    listTitle.textContent = cat.name;
     listSub.textContent = subText;
-    listHeaderIcon.innerHTML = `<i data-lucide="${escapeHtml(icon)}"></i>`;
+    listHeaderIcon.innerHTML = `<i data-lucide="${escapeHtml(cat.icon || 'map-pin')}"></i>`;
 
     const q = state.listQuery.trim();
     listSearchClear.classList.toggle('show', q.length > 0);
@@ -1074,113 +1181,51 @@
     if (filtered.length === 0) {
       locList.innerHTML = '';
       listEmpty.style.display = '';
-      listEmptyText.textContent = q ? 'Hech narsa topilmadi' : emptyText;
+      listEmptyText.textContent = q ? 'Hech narsa topilmadi' : 'Hech narsa topilmadi';
     } else {
       listEmpty.style.display = 'none';
-      locList.innerHTML = filtered.map((loc, i) =>
-        locCardHtml(loc, i, { showCat: view.mode === 'fav' })
-      ).join('');
+      locList.innerHTML = filtered.map((loc, i) => locCardHtml(loc, i)).join('');
       bindLocCards(locList, filtered);
     }
     refreshIcons();
   }
 
   /* =========================================================
-     Navigation / transitions
+     Render: FAV (Sevimli tab)
      ========================================================= */
-  let currentView = { screen: 'home' };
+  function renderFav() {
+    const all = getAllFavLocations();
+    favSub.textContent = `${all.length} ta joy`;
+    const q = state.favQuery.trim();
+    favSearchClear.classList.toggle('show', q.length > 0);
+    const filtered = q ? all.filter(loc => matches(loc.name, q)) : all;
 
-  function applyScreens(view, { animate = true } = {}) {
-    if (!animate) document.body.classList.add('no-anim');
-
-    const targetEl =
-      view.screen === 'home'    ? screenHome :
-      view.screen === 'contact' ? screenContact :
-                                  screenList;
-    const deepScreens = [screenList, screenContact];
-
-    [screenHome, screenList, screenContact].forEach(s => {
-      s.setAttribute('aria-hidden', s === targetEl ? 'false' : 'true');
-    });
-
-    if (view.screen === 'home') {
-      // Push deep screens off-right, bring home in
-      deepScreens.forEach(s => {
-        s.classList.remove('active', 'exit-left', 'enter-right');
-        s.classList.add('exit-right');
-      });
-      screenHome.classList.remove('exit-left', 'exit-right', 'enter-right');
-      void screenHome.offsetWidth;
-      screenHome.classList.add('active');
-      setTimeout(() => {
-        if (currentView.screen === 'home') {
-          deepScreens.forEach(s => {
-            s.classList.remove('exit-right');
-            s.classList.add('enter-right');
-          });
-        }
-      }, 320);
+    if (filtered.length === 0) {
+      favList.innerHTML = '';
+      favEmpty.style.display = '';
     } else {
-      // Push home off-left, hide other deep screens off-right, bring target in
-      screenHome.classList.remove('active', 'enter-right', 'exit-right');
-      screenHome.classList.add('exit-left');
-      deepScreens.forEach(s => {
-        if (s !== targetEl) {
-          s.classList.remove('active', 'exit-left', 'enter-right');
-          s.classList.add('exit-right');
-        }
-      });
-      targetEl.classList.remove('enter-right', 'exit-right', 'exit-left');
-      void targetEl.offsetWidth;
-      targetEl.classList.add('active');
-      targetEl.scrollTop = 0;
+      favEmpty.style.display = 'none';
+      favList.innerHTML = filtered.map((loc, i) => locCardHtml(loc, i, { showCat: true })).join('');
+      bindLocCards(favList, filtered);
     }
-
-    // Telegram BackButton
-    if (tg && tg.BackButton) {
-      try {
-        if (view.screen === 'home') tg.BackButton.hide();
-        else tg.BackButton.show();
-      } catch (e) {}
-    }
-
-    if (!animate) {
-      requestAnimationFrame(() => document.body.classList.remove('no-anim'));
-    }
+    refreshIcons();
   }
 
-  function applyView(view, opts = {}) {
-    currentView = view;
-    if (view.screen === 'home') {
-      renderHome();
-    } else if (view.screen === 'contact') {
-      renderContact();
-    } else {
-      // reset list search when entering a new list
-      if (currentListKey() !== viewKey(view)) {
-        state.listQuery = '';
-        listSearchInput.value = '';
-      }
-      renderList(view);
-    }
-    applyScreens(view, opts);
-  }
-
+  /* =========================================================
+     Render: CONTACT (Aloqa tab)
+     ========================================================= */
   function renderContact() {
     setContactStatus('', null);
   }
-
-  function setContactStatus(text, kind /* 'success'|'error'|'pending'|null */) {
+  function setContactStatus(text, kind) {
     const el = document.getElementById('contact-status');
     el.textContent = text || '';
     el.className = 'contact-status' + (kind ? ' ' + kind : '');
   }
-
   async function sendContact() {
     const textarea = document.getElementById('contact-message');
     const btn = document.getElementById('contact-send');
     const message = textarea.value.trim();
-
     if (!message) {
       setContactStatus("Xabar bo'sh bo'lmasligi kerak", 'error');
       haptic('medium');
@@ -1195,18 +1240,13 @@
       setContactStatus("Server hali sozlanmagan. Iltimos, keyinroq urinib ko'ring.", 'error');
       return;
     }
-
     btn.disabled = true;
     setContactStatus("Yuborilmoqda...", 'pending');
-
     try {
       const res = await fetch(`${CONFIG.API_URL.replace(/\/$/, '')}/api/contact`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          initData: (tg && tg.initData) || '',
-          message: message,
-        }),
+        body: JSON.stringify({ initData: (tg && tg.initData) || '', message }),
       });
       if (!res.ok) {
         const txt = await res.text().catch(() => '');
@@ -1222,22 +1262,132 @@
     }
   }
 
-  function viewKey(view) {
-    if (view.screen === 'home') return 'home';
-    if (view.mode === 'fav') return 'list:fav';
-    return `list:cat:${view.id}`;
+  /* =========================================================
+     Navigation / transitions
+     ========================================================= */
+  let currentView = { screen: 'home' };
+
+  function screenEl(view) {
+    if (view.screen === 'home')    return screenHome;
+    if (view.screen === 'fav')     return screenFav;
+    if (view.screen === 'contact') return screenContact;
+    if (view.screen === 'list')    return screenList;
+    return null;
   }
+
+  function applyScreens(view, { animate = true } = {}) {
+    const targetEl = screenEl(view);
+    const allScreens = [screenHome, screenFav, screenContact, screenList];
+    const prev = currentView;
+    const goingToList   = view.screen === 'list';
+    const cameFromList  = prev && prev.screen === 'list';
+
+    // Animate only on drill-down / drill-up. Tab switches and initial paint = snap.
+    const useAnim = animate && (goingToList || cameFromList);
+    if (!useAnim) document.body.classList.add('no-anim');
+
+    allScreens.forEach(s => {
+      s.setAttribute('aria-hidden', s === targetEl ? 'false' : 'true');
+      if (s === targetEl) {
+        s.classList.remove('exit-left');
+        s.classList.add('active');
+      } else {
+        s.classList.remove('active');
+        // For drill-down, the screen that was active should slide left
+        if (goingToList && prev && screenEl(prev) === s) {
+          s.classList.add('exit-left');
+        } else {
+          // Everything else snaps off-right (default state)
+          s.classList.remove('exit-left');
+        }
+      }
+    });
+
+    if (targetEl) {
+      // Force reflow so transition triggers from off-right -> active
+      void targetEl.offsetWidth;
+      targetEl.scrollTop = 0;
+    }
+
+    // Tab bar visibility
+    const showTabs = isTopLevel(view);
+    tabBarEl.classList.toggle('hidden', !showTabs);
+    tabBarEl.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.tab === view.screen);
+    });
+
+    // Telegram BackButton: only on drill-down
+    if (tg && tg.BackButton) {
+      try {
+        if (view.screen === 'list') tg.BackButton.show();
+        else tg.BackButton.hide();
+      } catch (e) {}
+    }
+
+    if (!useAnim) requestAnimationFrame(() => document.body.classList.remove('no-anim'));
+  }
+
+  function applyView(view, opts = {}) {
+    const prev = currentView;
+    currentView = view;
+    if (view.screen === 'home') renderHome();
+    else if (view.screen === 'fav') {
+      // Reset fav search if just entered
+      if (prev.screen !== 'fav') {
+        state.favQuery = '';
+        favSearchInput.value = '';
+      }
+      renderFav();
+    }
+    else if (view.screen === 'contact') renderContact();
+    else if (view.screen === 'list') {
+      const k = `list:cat:${view.id}`;
+      if (_lastListKey !== k) {
+        state.listQuery = '';
+        listSearchInput.value = '';
+      }
+      _lastListKey = k;
+      renderList(view);
+    }
+    applyScreens(view, opts);
+  }
+
   let _lastListKey = null;
-  function currentListKey() { return _lastListKey; }
-  function commitListKey(view) {
-    if (view.screen === 'list') _lastListKey = viewKey(view);
-  }
+
+  /* =========================================================
+     Hero promo public API (for future use)
+     Example:
+       showHeroPromo({
+         badge: 'Yangi',
+         label: 'AKSIYA',
+         name: 'Ramazon bayramiga 30% chegirma',
+         meta: 'Faqat shu hafta',
+         icon: 'gift',
+         onClick: () => tg.openTelegramLink('https://t.me/...')
+       });
+     ========================================================= */
+  window.showHeroPromo = function({ badge, label, name, meta, icon, onClick } = {}) {
+    const el = document.getElementById('hero-promo');
+    if (!el) return;
+    document.getElementById('hero-promo-badge').textContent = badge || 'Yangi';
+    document.getElementById('hero-promo-label').textContent = (label || '').toUpperCase();
+    document.getElementById('hero-promo-name').textContent = name || '';
+    document.getElementById('hero-promo-meta').textContent = meta || '';
+    const iconEl = document.getElementById('hero-promo-icon');
+    if (iconEl) iconEl.parentElement.innerHTML = `<i data-lucide="${escapeHtml(icon || 'megaphone')}" id="hero-promo-icon"></i>`;
+    el.hidden = false;
+    el.onclick = onClick || null;
+    refreshIcons();
+  };
+  window.hideHeroPromo = function() {
+    const el = document.getElementById('hero-promo');
+    if (el) el.hidden = true;
+  };
 
   /* =========================================================
      Boot
      ========================================================= */
   async function loadCatalog() {
-    // Try server's mutable catalog first (so admin edits via bot are reflected live)
     if (CONFIG.API_URL) {
       try {
         const res = await fetch(`${CONFIG.API_URL.replace(/\/$/, '')}/api/catalog`, { cache: 'no-cache' });
@@ -1245,9 +1395,8 @@
           const data = await res.json();
           if (data && typeof data === 'object' && Object.keys(data).length > 0) return data;
         }
-      } catch (e) { /* fall through to static */ }
+      } catch (e) {}
     }
-    // Fallback: static catalog.json on the same origin
     const res = await fetch('catalog.json', { cache: 'no-cache' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
@@ -1257,13 +1406,12 @@
 
   function showError(msg) {
     document.getElementById('error-text').textContent = msg || "Ma'lumotlarni yuklashda xatolik";
-    screenHome.style.display = 'none';
-    screenList.style.display = 'none';
+    [screenHome, screenList, screenFav, screenContact].forEach(s => { s.style.display = 'none'; });
+    tabBarEl.classList.add('hidden');
     screenError.style.display = '';
     loaderEl.classList.add('hide');
     refreshIcons();
   }
-
   function hideLoader() {
     loaderEl.classList.add('hide');
     setTimeout(() => { loaderEl.style.display = 'none'; }, 220);
@@ -1277,23 +1425,17 @@
       return;
     }
 
-    // Initial view from hash (normalize invalid hashes)
     const initial = parseHash();
     setRoute(initial, { replace: true });
     applyView(initial, { animate: false });
-    commitListKey(initial);
 
-    // Sync favourites from server in the background (no UI block)
+    // Background sync
     syncFavsFromServer();
-
-    // Analytics: app opened
     trackEvent('open');
 
-    // Listen to hash changes
+    // hashchange routing
     window.addEventListener('hashchange', () => {
-      const v = parseHash();
-      applyView(v);
-      commitListKey(v);
+      applyView(parseHash());
     });
 
     // Search wiring
@@ -1317,52 +1459,42 @@
       renderList(currentView);
       listSearchInput.focus();
     });
-
-    // Favorites quick link
-    favQuick.addEventListener('click', () => {
-      haptic('light');
-      setRoute({ screen: 'list', mode: 'fav' });
+    favSearchInput.addEventListener('input', () => {
+      state.favQuery = favSearchInput.value;
+      renderFav();
+    });
+    favSearchClear.addEventListener('click', () => {
+      favSearchInput.value = '';
+      state.favQuery = '';
+      renderFav();
+      favSearchInput.focus();
     });
 
-    // Contact CTA
-    document.getElementById('contact-cta').addEventListener('click', () => {
-      haptic('light');
-      setRoute({ screen: 'contact' });
-    });
+    // Contact form
+    document.getElementById('contact-send').addEventListener('click', sendContact);
 
-    // Credit (author link)
+    // Credit link
     document.getElementById('credit-link').addEventListener('click', (e) => {
       e.preventDefault();
       haptic('light');
       try {
         if (tg && tg.openTelegramLink) tg.openTelegramLink('https://t.me/zayd_usamah');
         else window.open('https://t.me/zayd_usamah', '_blank');
-      } catch (_) {
-        window.open('https://t.me/zayd_usamah', '_blank');
-      }
+      } catch (_) { window.open('https://t.me/zayd_usamah', '_blank'); }
     });
 
-    // Contact back button
-    document.getElementById('contact-back-btn').addEventListener('click', () => {
-      haptic('light');
-      if (history.length > 1) history.back();
-      else setRoute({ screen: 'home' });
-    });
-
-    // Contact form submit
-    document.getElementById('contact-send').addEventListener('click', sendContact);
-
-    // Back button (category/fav)
+    // Back button
     backBtn.addEventListener('click', () => {
       haptic('light');
       if (history.length > 1) history.back();
       else setRoute({ screen: 'home' });
     });
 
+    // Telegram BackButton
     if (tg && tg.BackButton) {
       try {
         tg.BackButton.onClick(() => {
-          if (currentView.screen !== 'home') {
+          if (currentView.screen === 'list') {
             if (history.length > 1) history.back();
             else setRoute({ screen: 'home' });
           }
@@ -1370,17 +1502,26 @@
       } catch (e) {}
     }
 
+    // Tab bar
+    tabBarEl.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        if (tab === currentView.screen) return; // already active
+        haptic('light');
+        setRoute({ screen: tab });
+      });
+    });
+
+    document.getElementById('retry-btn').addEventListener('click', () => {
+      screenError.style.display = 'none';
+      [screenHome, screenList, screenFav, screenContact].forEach(s => { s.style.display = ''; });
+      loaderEl.style.display = '';
+      loaderEl.classList.remove('hide');
+      boot();
+    });
+
     hideLoader();
   }
-
-  document.getElementById('retry-btn').addEventListener('click', () => {
-    screenError.style.display = 'none';
-    screenHome.style.display = '';
-    screenList.style.display = '';
-    loaderEl.style.display = '';
-    loaderEl.classList.remove('hide');
-    boot();
-  });
 
   refreshIcons();
   boot();
