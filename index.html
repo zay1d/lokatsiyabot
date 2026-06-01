@@ -325,12 +325,12 @@
     letter-spacing: 0.06em;
   }
 
-  /* CATEGORY GRID (4 columns) */
+  /* CATEGORY GRID (3 columns) */
   .cat-grid {
     padding: 0 16px 24px;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
     position: relative;
     z-index: 1;
   }
@@ -338,14 +338,14 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-tile);
-    padding: 14px 6px 12px;
+    padding: 16px 10px 14px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     text-align: center;
     cursor: pointer;
-    min-height: 108px;
+    min-height: 112px;
     transition: transform 120ms ease, background 160ms ease, border-color 200ms ease, box-shadow 200ms ease;
     overflow: hidden;
   }
@@ -356,7 +356,7 @@
     box-shadow: 0 0 18px rgba(61, 220, 151, 0.12);
   }
   .cat-tile-icon {
-    width: 44px; height: 44px;
+    width: 46px; height: 46px;
     border-radius: 13px;
     background: var(--accent-soft);
     color: var(--accent-bright);
@@ -366,9 +366,9 @@
     border: 1px solid var(--border);
     flex-shrink: 0;
   }
-  .cat-tile-icon svg { width: 22px; height: 22px; stroke-width: 2; }
+  .cat-tile-icon svg { width: 23px; height: 23px; stroke-width: 2; }
   .cat-tile-name {
-    font-size: 10.5px;
+    font-size: 10px;
     font-weight: 700;
     line-height: 1.2;
     color: var(--text);
@@ -381,6 +381,7 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
+    letter-spacing: 0.02em;
   }
 
   /* LOCATION LIST */
