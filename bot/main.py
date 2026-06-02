@@ -73,6 +73,10 @@ ADMIN_USER_IDS: set[int] = _parse_admin_user_ids(os.environ.get("ADMIN_USER_IDS"
 log.info("Admin user IDs: %s", sorted(ADMIN_USER_IDS))
 
 PORT = int(os.environ.get("PORT", "8080"))
+# Bind only to localhost by default — nginx terminates TLS and proxies in.
+# DO NOT set to 0.0.0.0 unless you know exactly why (it exposes the API
+# bypassing nginx/TLS to anyone on the internet).
+BIND_HOST = os.environ.get("BIND_HOST", "127.0.0.1")
 ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "*")
 STATE_FILE = Path(os.environ.get("STATE_FILE", "state.json"))
 FAVORITES_FILE = Path(os.environ.get("FAVORITES_FILE", "favorites.json"))
@@ -1165,9 +1169,9 @@ async def main() -> None:
 
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, "0.0.0.0", PORT)
+    site = web.TCPSite(runner, BIND_HOST, PORT)
     await site.start()
-    log.info("HTTP server listening on :%s", PORT)
+    log.info("HTTP server listening on %s:%s", BIND_HOST, PORT)
 
     try:
         await dp.start_polling(bot)
