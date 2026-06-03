@@ -221,6 +221,29 @@ def save_tracks(t: dict) -> None:
 tracks: dict = load_tracks()
 
 
+def _cleanup_admin_from_tracks() -> None:
+    """Remove admin IDs from existing tracks so 'unique users' counts are clean.
+    Aggregate counters (opens/categories/locations) can't be unwound — they keep
+    the pre-fix historical numbers. Runs once at startup."""
+    admin_strs = {str(uid) for uid in ADMIN_USER_IDS}
+    changed = False
+    before = len(tracks["users"])
+    tracks["users"].difference_update(admin_strs)
+    if len(tracks["users"]) != before:
+        changed = True
+    for day_data in tracks["daily"].values():
+        before = len(day_data["users"])
+        day_data["users"].difference_update(admin_strs)
+        if len(day_data["users"]) != before:
+            changed = True
+    if changed:
+        save_tracks(tracks)
+        log.info("Removed admin user_ids from historical tracks")
+
+
+_cleanup_admin_from_tracks()
+
+
 def _today_utc() -> str:
     from datetime import datetime, timezone
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -337,8 +360,10 @@ async def handle_contact(request: web.Request) -> web.Response:
 
     admin_msg_to_user[sent.message_id] = user_id
     save_state(admin_msg_to_user)
-    tracks["contacts"] += 1
-    save_tracks(tracks)
+    # Admins don't pollute the contacts counter (they test the form)
+    if user_id not in ADMIN_USER_IDS:
+        tracks["contacts"] += 1
+        save_tracks(tracks)
     log.info("Forwarded msg from user %s to admin (message_id=%s)", user_id, sent.message_id)
     return web.json_response({"ok": True})
 
@@ -372,6 +397,10 @@ async def handle_track(request: web.Request) -> web.Response:
         return web.json_response({"error": "bad event"}, status=400)
     if event in ("category", "location") and not target:
         return web.json_response({"error": "target required"}, status=400)
+
+    # Admins are excluded from statistics so their own testing doesn't skew numbers
+    if uid in ADMIN_USER_IDS:
+        return web.json_response({"ok": True, "skipped": "admin"})
 
     str_uid = str(uid)
     bucket = _day_bucket(_today_utc())
