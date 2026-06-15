@@ -305,6 +305,65 @@
   .hero-name { font-size: 17px; font-weight: 700; color: var(--text); margin-top: 4px; line-height: 1.2; }
   .hero-meta { font-size: 12px; font-weight: 500; color: var(--text-dim); margin-top: 3px; }
 
+  /* PRAYER CARD (Masjid an-Nabawi imam/muezzin) */
+  .prayer-card {
+    margin: 16px var(--pad) 0;
+    border-radius: var(--radius-card);
+    padding: 16px 16px 18px;
+    background: linear-gradient(135deg, rgba(61, 220, 151, 0.10), rgba(61, 220, 151, 0.02));
+    border: 1px solid var(--border-strong);
+    box-shadow: 0 0 28px rgba(61, 220, 151, 0.08);
+    position: relative;
+    z-index: 2;
+  }
+  .prayer-card[hidden] { display: none; }
+  .prayer-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .prayer-head-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700;
+    color: var(--accent-bright);
+    letter-spacing: 0.02em;
+  }
+  .prayer-head-badge svg { width: 14px; height: 14px; stroke-width: 2.2; }
+  .prayer-hijri { font-size: 11px; font-weight: 600; color: var(--text-mute); }
+  .prayer-row {
+    display: flex; align-items: center; gap: 14px;
+  }
+  .prayer-when { flex-shrink: 0; min-width: 78px; }
+  .prayer-name { font-size: 20px; font-weight: 700; color: var(--text); line-height: 1.1; }
+  .prayer-time { font-size: 15px; font-weight: 700; color: var(--accent-bright); margin-top: 2px; font-feature-settings: 'tnum'; }
+  .prayer-countdown { font-size: 11px; font-weight: 500; color: var(--text-dim); margin-top: 3px; }
+  .prayer-people {
+    flex: 1; min-width: 0;
+    display: flex; flex-direction: column; gap: 10px;
+    border-left: 1px solid var(--border);
+    padding-left: 14px;
+  }
+  .prayer-person { display: flex; align-items: center; gap: 10px; }
+  .prayer-portrait {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    object-fit: cover;
+    background: var(--surface);
+    flex-shrink: 0;
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+  .prayer-person-meta { min-width: 0; }
+  .prayer-role {
+    font-size: 9px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.10em; color: var(--text-mute);
+  }
+  .prayer-pname {
+    font-size: 13px; font-weight: 700; color: var(--text);
+    line-height: 1.2; margin-top: 1px;
+    overflow: hidden; text-overflow: ellipsis;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+
   /* SECTION LABEL */
   .section-label {
     padding: 22px var(--pad) 14px;
@@ -709,6 +768,37 @@
           <div class="hero-label" id="hero-promo-label">PROMO</div>
           <div class="hero-name" id="hero-promo-name">Tez orada</div>
           <div class="hero-meta" id="hero-promo-meta"></div>
+        </div>
+      </div>
+
+      <!-- Masjid an-Nabawi next prayer: imam + muezzin. Filled by loadPrayerInfo(). -->
+      <div class="prayer-card" id="prayer-card" hidden>
+        <div class="prayer-head">
+          <span class="prayer-head-badge"><i data-lucide="moon-star"></i> Masjid an-Nabaviy</span>
+          <span class="prayer-hijri" id="prayer-hijri"></span>
+        </div>
+        <div class="prayer-row">
+          <div class="prayer-when">
+            <div class="prayer-name" id="prayer-name">—</div>
+            <div class="prayer-time" id="prayer-time">—</div>
+            <div class="prayer-countdown" id="prayer-countdown"></div>
+          </div>
+          <div class="prayer-people">
+            <div class="prayer-person">
+              <img class="prayer-portrait" id="imam-photo" alt="Imom" loading="lazy">
+              <div class="prayer-person-meta">
+                <div class="prayer-role">Imom</div>
+                <div class="prayer-pname" id="imam-name">—</div>
+              </div>
+            </div>
+            <div class="prayer-person">
+              <img class="prayer-portrait" id="muezzin-photo" alt="Muazzin" loading="lazy">
+              <div class="prayer-person-meta">
+                <div class="prayer-role">Muazzin</div>
+                <div class="prayer-pname" id="muezzin-name">—</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1386,6 +1476,80 @@
   };
 
   /* =========================================================
+     Prayer card (Masjid an-Nabawi imam/muezzin)
+     ========================================================= */
+  let _prayerTime = null;      // Date object of next prayer (UTC)
+  let _prayerTimer = null;
+
+  async function loadPrayerInfo() {
+    if (!CONFIG.API_URL) return;
+    try {
+      const res = await fetch(`${CONFIG.API_URL.replace(/\/$/, '')}/api/prayer-info`, { cache: 'no-cache' });
+      if (!res.ok) return;
+      const d = await res.json();
+      if (!d || !d.available) return;
+      renderPrayerCard(d);
+    } catch (e) { /* silent — card stays hidden */ }
+  }
+
+  function renderPrayerCard(d) {
+    const card = document.getElementById('prayer-card');
+    if (!card) return;
+    document.getElementById('prayer-name').textContent = d.prayer_label || '';
+    document.getElementById('prayer-hijri').textContent = d.hijri || '';
+    document.getElementById('imam-name').textContent = d.imam_name || '—';
+    document.getElementById('muezzin-name').textContent = d.muezzin_name || '—';
+
+    const imamImg = document.getElementById('imam-photo');
+    const muImg = document.getElementById('muezzin-photo');
+    setPortrait(imamImg, d.imam_photo);
+    setPortrait(muImg, d.muezzin_photo);
+
+    // Prayer clock time in KSA (UTC+3)
+    _prayerTime = d.time_utc ? new Date(d.time_utc) : null;
+    if (_prayerTime && !isNaN(_prayerTime)) {
+      const hhmm = _prayerTime.toLocaleTimeString('en-GB', {
+        hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Riyadh'
+      });
+      document.getElementById('prayer-time').textContent = hhmm;
+    } else {
+      document.getElementById('prayer-time').textContent = '';
+    }
+    tickCountdown();
+    if (_prayerTimer) clearInterval(_prayerTimer);
+    _prayerTimer = setInterval(tickCountdown, 30000);
+
+    card.hidden = false;
+    refreshIcons();
+  }
+
+  function setPortrait(img, url) {
+    if (url) {
+      img.src = url;
+      img.style.display = '';
+      img.onerror = () => { img.style.visibility = 'hidden'; };
+    } else {
+      img.style.display = 'none';
+    }
+  }
+
+  function tickCountdown() {
+    const el = document.getElementById('prayer-countdown');
+    if (!el || !_prayerTime || isNaN(_prayerTime)) { if (el) el.textContent = ''; return; }
+    let diff = Math.floor((_prayerTime.getTime() - Date.now()) / 1000);
+    if (diff <= 0) {
+      el.textContent = 'Hozir';
+      // Refresh shortly after the prayer time to advance to the next one
+      if (diff > -120) setTimeout(loadPrayerInfo, 90000);
+      return;
+    }
+    const h = Math.floor(diff / 3600);
+    const m = Math.floor((diff % 3600) / 60);
+    if (h > 0) el.textContent = `${h} soat ${m} daqiqa qoldi`;
+    else el.textContent = `${m} daqiqa qoldi`;
+  }
+
+  /* =========================================================
      Boot
      ========================================================= */
   async function loadCatalog() {
@@ -1433,6 +1597,7 @@
     // Background sync
     syncFavsFromServer();
     trackEvent('open');
+    loadPrayerInfo();
 
     // hashchange routing
     window.addEventListener('hashchange', () => {

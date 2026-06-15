@@ -41,6 +41,9 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import CallbackQuery, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from datetime import datetime, timedelta, timezone
+
+import aiohttp
 from aiohttp import web
 
 logging.basicConfig(
@@ -375,6 +378,144 @@ async def handle_health(request: web.Request) -> web.Response:
 async def handle_catalog(request: web.Request) -> web.Response:
     resp = web.json_response(catalog_data)
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return resp
+
+
+# -------------------- Prayer info (Al-Masjid an-Nabawi imams/muezzins) --------------------
+# Public JSON API from the General Presidency for the Affairs of the Two Holy Mosques.
+# No scraping needed: https://haramainflagsapi.prh.gov.sa/prayers?datetimestampz=YYYY-MM-DD&mosque=madinah
+# Returns next upcoming prayer with imam + muezzin names and portrait photos.
+
+PRAYER_API = "https://haramainflagsapi.prh.gov.sa/prayers"
+KSA_TZ = timezone(timedelta(hours=3))  # Asia/Riyadh, no DST
+MAIN_PRAYERS = ["fajr", "dhuhr", "asr", "maghrib", "isha"]
+PRAYER_LABELS = {
+    "fajr": "Bomdod",
+    "dhuhr": "Peshin",
+    "asr": "Asr",
+    "maghrib": "Shom",
+    "isha": "Xufton",
+}
+PRAYER_LABELS_AR = {
+    "fajr": "الفجر", "dhuhr": "الظهر", "asr": "العصر",
+    "maghrib": "المغرب", "isha": "العشاء",
+}
+HIJRI_MONTHS = [
+    "Muharram", "Safar", "Rabiul-avval", "Rabiul-oxir", "Jumadul-avval",
+    "Jumadul-oxir", "Rajab", "Sha'bon", "Ramazon", "Shavvol",
+    "Zulqa'da", "Zulhijja",
+]
+
+# Simple in-memory cache: date_str -> (fetched_at_epoch, raw_list)
+_prayer_cache: dict[str, tuple[float, list]] = {}
+_PRAYER_TTL = 30 * 60  # 30 minutes
+
+
+async def _fetch_prayers_for(date_str: str) -> list | None:
+    """Fetch (and cache) the raw prayer list for a KSA date (YYYY-MM-DD)."""
+    now = time.time()
+    cached = _prayer_cache.get(date_str)
+    if cached and now - cached[0] < _PRAYER_TTL:
+        return cached[1]
+    try:
+        timeout = aiohttp.ClientTimeout(total=15)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(
+                PRAYER_API,
+                params={"datetimestampz": date_str, "mosque": "madinah"},
+                headers={"User-Agent": "Mozilla/5.0"},
+            ) as resp:
+                if resp.status != 200:
+                    log.warning("prayer api HTTP %s for %s", resp.status, date_str)
+                    return cached[1] if cached else None
+                data = await resp.json()
+    except Exception:
+        log.exception("prayer api fetch failed for %s", date_str)
+        return cached[1] if cached else None
+    if not isinstance(data, list):
+        return None
+    _prayer_cache[date_str] = (now, data)
+    return data
+
+
+def _person_name(p: dict | None) -> str:
+    if not p:
+        return ""
+    parts = [p.get("firstNameEn"), p.get("middleNameEn"), p.get("lastNameEn")]
+    return " ".join(x for x in parts if x).strip()
+
+
+def _person_name_ar(p: dict | None) -> str:
+    if not p:
+        return ""
+    parts = [p.get("firstName"), p.get("middleName"), p.get("lastName")]
+    return " ".join(x for x in parts if x).strip()
+
+
+def _format_prayer(entry: dict) -> dict:
+    imam = entry.get("imam") or {}
+    muezzin = entry.get("muezzin") or {}
+    name = entry.get("prayer", "")
+    try:
+        hm = HIJRI_MONTHS[int(entry.get("hijriMonth", 0)) - 1]
+    except Exception:
+        hm = ""
+    hijri = f"{entry.get('hijriDay','')} {hm} {entry.get('hijriYear','')}".strip()
+    return {
+        "available": True,
+        "prayer": name,
+        "prayer_label": PRAYER_LABELS.get(name, name.title()),
+        "prayer_ar": PRAYER_LABELS_AR.get(name, ""),
+        "time_utc": entry.get("datetimestampz", ""),
+        "imam_name": _person_name(imam) or "—",
+        "imam_name_ar": _person_name_ar(imam),
+        "imam_photo": imam.get("image") or "",
+        "muezzin_name": _person_name(muezzin) or "—",
+        "muezzin_name_ar": _person_name_ar(muezzin),
+        "muezzin_photo": muezzin.get("image") or "",
+        "hijri": hijri,
+    }
+
+
+async def _next_prayer() -> dict | None:
+    now_utc = datetime.now(timezone.utc)
+    today_ksa = (now_utc + timedelta(hours=3)).date().isoformat()
+
+    today = await _fetch_prayers_for(today_ksa)
+    if today:
+        upcoming = []
+        for entry in today:
+            if entry.get("prayer") not in MAIN_PRAYERS:
+                continue
+            ts = entry.get("datetimestampz")
+            if not ts:
+                continue
+            try:
+                pt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            except Exception:
+                continue
+            if pt > now_utc:
+                upcoming.append((pt, entry))
+        if upcoming:
+            upcoming.sort(key=lambda x: x[0])
+            return _format_prayer(upcoming[0][1])
+
+    # All of today's prayers passed → tomorrow's fajr
+    tomorrow_ksa = (now_utc + timedelta(hours=3) + timedelta(days=1)).date().isoformat()
+    tomorrow = await _fetch_prayers_for(tomorrow_ksa)
+    if tomorrow:
+        for entry in tomorrow:
+            if entry.get("prayer") == "fajr":
+                return _format_prayer(entry)
+    return None
+
+
+async def handle_prayer_info(request: web.Request) -> web.Response:
+    info = await _next_prayer()
+    if not info:
+        return web.json_response({"available": False})
+    resp = web.json_response(info)
+    resp.headers["Cache-Control"] = "public, max-age=300"
     return resp
 
 
@@ -1194,6 +1335,7 @@ async def main() -> None:
     app.router.add_post("/api/favorites/toggle", handle_favs_toggle)
     app.router.add_get("/api/catalog", handle_catalog)
     app.router.add_post("/api/track", handle_track)
+    app.router.add_get("/api/prayer-info", handle_prayer_info)
     app.router.add_get("/health", handle_health)
 
     runner = web.AppRunner(app)
