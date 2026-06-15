@@ -315,8 +315,86 @@
     box-shadow: 0 0 28px rgba(61, 220, 151, 0.08);
     position: relative;
     z-index: 2;
+    cursor: pointer;
+    transition: transform 120ms ease, border-color 200ms ease, box-shadow 200ms ease;
   }
   .prayer-card[hidden] { display: none; }
+  .prayer-card:active {
+    transform: scale(0.985);
+    border-color: var(--accent);
+    box-shadow: 0 0 36px rgba(61, 220, 151, 0.14);
+  }
+  .prayer-tap-hint {
+    position: absolute;
+    right: 14px; bottom: 12px;
+    font-size: 9px; font-weight: 700;
+    color: var(--text-mute);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    display: inline-flex; align-items: center; gap: 4px;
+    pointer-events: none;
+  }
+  .prayer-tap-hint svg { width: 11px; height: 11px; stroke-width: 2.4; }
+
+  /* PRAYER DAY (full schedule drill-down) */
+  .prayer-day-list {
+    display: flex; flex-direction: column;
+    gap: 10px;
+    padding: 4px var(--pad) 40px;
+    position: relative;
+    z-index: 1;
+  }
+  .prayer-day-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    padding: 14px;
+    display: flex; align-items: stretch;
+    gap: 14px;
+    transition: border-color 200ms ease, background 160ms ease;
+  }
+  .prayer-day-item.is-next {
+    background: linear-gradient(135deg, rgba(61, 220, 151, 0.10), rgba(61, 220, 151, 0.02));
+    border-color: var(--border-strong);
+    box-shadow: 0 0 22px rgba(61, 220, 151, 0.10);
+  }
+  .prayer-day-item.is-past { opacity: 0.6; }
+  .prayer-day-when {
+    flex-shrink: 0;
+    min-width: 70px;
+    display: flex; flex-direction: column;
+    justify-content: center;
+    border-right: 1px solid var(--border);
+    padding-right: 12px;
+  }
+  .prayer-day-name { font-size: 16px; font-weight: 700; color: var(--text); line-height: 1.1; }
+  .prayer-day-time { font-size: 14px; font-weight: 700; color: var(--accent-bright); margin-top: 2px; font-feature-settings: 'tnum'; }
+  .prayer-day-status { font-size: 9px; font-weight: 700; color: var(--text-mute); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 3px; }
+  .prayer-day-item.is-next .prayer-day-status { color: var(--accent-bright); }
+  .prayer-day-people {
+    flex: 1; min-width: 0;
+    display: flex; flex-direction: column;
+    gap: 8px;
+    justify-content: center;
+  }
+  .prayer-day-person {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .prayer-day-portrait {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    object-fit: cover;
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .prayer-day-pmeta { min-width: 0; flex: 1; }
+  .prayer-day-role { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.10em; color: var(--text-mute); }
+  .prayer-day-pname {
+    font-size: 12.5px; font-weight: 700; color: var(--text);
+    line-height: 1.25; margin-top: 2px;
+    word-break: break-word;
+  }
   .prayer-head {
     display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 14px;
@@ -358,10 +436,11 @@
     letter-spacing: 0.10em; color: var(--text-mute);
   }
   .prayer-pname {
-    font-size: 13px; font-weight: 700; color: var(--text);
-    line-height: 1.2; margin-top: 1px;
-    overflow: hidden; text-overflow: ellipsis;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    font-size: 12.5px; font-weight: 700; color: var(--text);
+    line-height: 1.25; margin-top: 2px;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    hyphens: none;
   }
 
   /* SECTION LABEL */
@@ -771,8 +850,9 @@
         </div>
       </div>
 
-      <!-- Masjid an-Nabawi next prayer: imam + muezzin. Filled by loadPrayerInfo(). -->
-      <div class="prayer-card" id="prayer-card" hidden>
+      <!-- Masjid an-Nabawi next prayer: imam + muezzin. Filled by loadPrayerInfo().
+           Tap to drill into today's full 5-prayer schedule (#prayer route). -->
+      <div class="prayer-card" id="prayer-card" hidden role="button" tabindex="0">
         <div class="prayer-head">
           <span class="prayer-head-badge"><i data-lucide="moon-star"></i> Masjid an-Nabaviy</span>
           <span class="prayer-hijri" id="prayer-hijri"></span>
@@ -800,6 +880,7 @@
             </div>
           </div>
         </div>
+        <span class="prayer-tap-hint">Kunlik jadval <i data-lucide="chevron-right"></i></span>
       </div>
 
       <div class="search-wrap">
@@ -848,6 +929,33 @@
       <div class="empty-state" id="list-empty" style="display:none">
         <span class="empty-ico"><i data-lucide="map-pin-off"></i></span>
         <div id="list-empty-text">Hech narsa topilmadi</div>
+      </div>
+    </section>
+
+    <!-- ============ PRAYER DAY (today's full schedule, drill-down) ============ -->
+    <section class="screen" id="screen-prayer-day" aria-hidden="true">
+      <div class="header-drill">
+        <div class="topbar">
+          <button class="back-btn" id="prayer-back-btn" aria-label="Orqaga">
+            <i data-lucide="arrow-left"></i>
+          </button>
+          <span class="ghost-btn" aria-hidden="true">
+            <i data-lucide="moon-star"></i>
+          </span>
+        </div>
+        <h1>Masjid an-Nabaviy<br><span class="hl">jadvali</span></h1>
+        <div class="subtitle" id="prayer-day-sub">Bugungi 5 vaqt namozi</div>
+      </div>
+
+      <div class="section-label">
+        <span>Namozlar</span>
+        <span class="count" id="prayer-day-hijri"></span>
+      </div>
+
+      <div class="prayer-day-list" id="prayer-day-list"></div>
+      <div class="empty-state" id="prayer-day-empty" style="display:none">
+        <span class="empty-ico"><i data-lucide="cloud-off"></i></span>
+        <div>Jadval yuklab bo'lmadi</div>
       </div>
     </section>
 
@@ -1062,8 +1170,9 @@
   function parseHash() {
     const h = location.hash.replace(/^#/, '');
     if (!h || h === 'home') return { screen: 'home' };
-    if (h === 'fav')     return { screen: 'fav' };
-    if (h === 'contact') return { screen: 'contact' };
+    if (h === 'fav')        return { screen: 'fav' };
+    if (h === 'contact')    return { screen: 'contact' };
+    if (h === 'prayer')     return { screen: 'prayer-day' };
     const params = new URLSearchParams(h);
     const cat = params.get('cat');
     if (cat && state.catalog && state.catalog[cat]) {
@@ -1074,10 +1183,11 @@
 
   function setRoute(view, { replace = false } = {}) {
     const target =
-      view.screen === 'home'    ? '' :
-      view.screen === 'fav'     ? '#fav' :
-      view.screen === 'contact' ? '#contact' :
-      view.screen === 'list'    ? `#cat=${encodeURIComponent(view.id)}` : '';
+      view.screen === 'home'        ? '' :
+      view.screen === 'fav'         ? '#fav' :
+      view.screen === 'contact'     ? '#contact' :
+      view.screen === 'prayer-day'  ? '#prayer' :
+      view.screen === 'list'        ? `#cat=${encodeURIComponent(view.id)}` : '';
     const url = location.pathname + location.search + target;
     if (replace) history.replaceState(null, '', url);
     else if ((location.hash || '') !== target) location.hash = target;
@@ -1087,17 +1197,21 @@
   function isTopLevel(view) {
     return view.screen === 'home' || view.screen === 'fav' || view.screen === 'contact';
   }
+  function isDrillDown(view) {
+    return view.screen === 'list' || view.screen === 'prayer-day';
+  }
 
   /* =========================================================
      DOM refs
      ========================================================= */
-  const screenHome    = document.getElementById('screen-home');
-  const screenList    = document.getElementById('screen-list');
-  const screenFav     = document.getElementById('screen-fav');
-  const screenContact = document.getElementById('screen-contact');
-  const screenError   = document.getElementById('screen-error');
-  const loaderEl      = document.getElementById('loader');
-  const tabBarEl      = document.getElementById('tab-bar');
+  const screenHome      = document.getElementById('screen-home');
+  const screenList      = document.getElementById('screen-list');
+  const screenFav       = document.getElementById('screen-fav');
+  const screenContact   = document.getElementById('screen-contact');
+  const screenPrayerDay = document.getElementById('screen-prayer-day');
+  const screenError     = document.getElementById('screen-error');
+  const loaderEl        = document.getElementById('loader');
+  const tabBarEl        = document.getElementById('tab-bar');
 
   const grid             = document.getElementById('cat-grid');
   const homeSearchResults = document.getElementById('home-search-results');
@@ -1359,22 +1473,23 @@
   let currentView = { screen: 'home' };
 
   function screenEl(view) {
-    if (view.screen === 'home')    return screenHome;
-    if (view.screen === 'fav')     return screenFav;
-    if (view.screen === 'contact') return screenContact;
-    if (view.screen === 'list')    return screenList;
+    if (view.screen === 'home')        return screenHome;
+    if (view.screen === 'fav')         return screenFav;
+    if (view.screen === 'contact')     return screenContact;
+    if (view.screen === 'list')        return screenList;
+    if (view.screen === 'prayer-day')  return screenPrayerDay;
     return null;
   }
 
   function applyScreens(view, { animate = true } = {}) {
     const targetEl = screenEl(view);
-    const allScreens = [screenHome, screenFav, screenContact, screenList];
+    const allScreens = [screenHome, screenFav, screenContact, screenList, screenPrayerDay];
     const prev = currentView;
-    const goingToList   = view.screen === 'list';
-    const cameFromList  = prev && prev.screen === 'list';
+    const goingToDrill  = isDrillDown(view);
+    const cameFromDrill = prev && isDrillDown(prev);
 
     // Animate only on drill-down / drill-up. Tab switches and initial paint = snap.
-    const useAnim = animate && (goingToList || cameFromList);
+    const useAnim = animate && (goingToDrill || cameFromDrill);
     if (!useAnim) document.body.classList.add('no-anim');
 
     allScreens.forEach(s => {
@@ -1385,7 +1500,7 @@
       } else {
         s.classList.remove('active');
         // For drill-down, the screen that was active should slide left
-        if (goingToList && prev && screenEl(prev) === s) {
+        if (goingToDrill && prev && screenEl(prev) === s) {
           s.classList.add('exit-left');
         } else {
           // Everything else snaps off-right (default state)
@@ -1410,7 +1525,7 @@
     // Telegram BackButton: only on drill-down
     if (tg && tg.BackButton) {
       try {
-        if (view.screen === 'list') tg.BackButton.show();
+        if (isDrillDown(view)) tg.BackButton.show();
         else tg.BackButton.hide();
       } catch (e) {}
     }
@@ -1439,6 +1554,9 @@
       }
       _lastListKey = k;
       renderList(view);
+    }
+    else if (view.screen === 'prayer-day') {
+      loadPrayerDay();
     }
     applyScreens(view, opts);
   }
@@ -1550,6 +1668,77 @@
   }
 
   /* =========================================================
+     Prayer day (full today's schedule)
+     ========================================================= */
+  async function loadPrayerDay() {
+    const list = document.getElementById('prayer-day-list');
+    const empty = document.getElementById('prayer-day-empty');
+    const hijri = document.getElementById('prayer-day-hijri');
+    list.innerHTML = '';
+    empty.style.display = 'none';
+    hijri.textContent = '';
+
+    if (!CONFIG.API_URL) {
+      empty.style.display = '';
+      return;
+    }
+    try {
+      const res = await fetch(`${CONFIG.API_URL.replace(/\/$/, '')}/api/prayer-today`, { cache: 'no-cache' });
+      if (!res.ok) throw new Error('http ' + res.status);
+      const d = await res.json();
+      if (!d || !d.available || !Array.isArray(d.prayers) || d.prayers.length === 0) {
+        empty.style.display = '';
+        return;
+      }
+      hijri.textContent = d.hijri || '';
+      const now = Date.now();
+      // Find index of the "next upcoming" — first prayer with time > now
+      let nextIdx = d.prayers.findIndex(p => {
+        const t = p.time_utc ? new Date(p.time_utc).getTime() : NaN;
+        return !isNaN(t) && t > now;
+      });
+      // Render items
+      list.innerHTML = d.prayers.map((p, i) => {
+        const t = p.time_utc ? new Date(p.time_utc) : null;
+        const hhmm = t && !isNaN(t)
+          ? t.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Riyadh' })
+          : '—';
+        const isNext = i === nextIdx;
+        const isPast = nextIdx !== -1 ? i < nextIdx : (t && !isNaN(t) && t.getTime() < now);
+        const status = isNext ? 'Keyingi' : (isPast ? "O'tdi" : '');
+        const cls = `prayer-day-item${isNext ? ' is-next' : ''}${isPast ? ' is-past' : ''}`;
+        return `
+          <div class="${cls}">
+            <div class="prayer-day-when">
+              <div class="prayer-day-name">${escapeHtml(p.prayer_label || p.prayer || '')}</div>
+              <div class="prayer-day-time">${escapeHtml(hhmm)}</div>
+              ${status ? `<div class="prayer-day-status">${status}</div>` : ''}
+            </div>
+            <div class="prayer-day-people">
+              <div class="prayer-day-person">
+                ${p.imam_photo ? `<img class="prayer-day-portrait" src="${escapeHtml(p.imam_photo)}" alt="Imom" loading="lazy" onerror="this.style.visibility='hidden'">` : ''}
+                <div class="prayer-day-pmeta">
+                  <div class="prayer-day-role">Imom</div>
+                  <div class="prayer-day-pname">${escapeHtml(p.imam_name || '—')}</div>
+                </div>
+              </div>
+              <div class="prayer-day-person">
+                ${p.muezzin_photo ? `<img class="prayer-day-portrait" src="${escapeHtml(p.muezzin_photo)}" alt="Muazzin" loading="lazy" onerror="this.style.visibility='hidden'">` : ''}
+                <div class="prayer-day-pmeta">
+                  <div class="prayer-day-role">Muazzin</div>
+                  <div class="prayer-day-pname">${escapeHtml(p.muezzin_name || '—')}</div>
+                </div>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+      refreshIcons();
+    } catch (e) {
+      empty.style.display = '';
+    }
+  }
+
+  /* =========================================================
      Boot
      ========================================================= */
   async function loadCatalog() {
@@ -1571,7 +1760,7 @@
 
   function showError(msg) {
     document.getElementById('error-text').textContent = msg || "Ma'lumotlarni yuklashda xatolik";
-    [screenHome, screenList, screenFav, screenContact].forEach(s => { s.style.display = 'none'; });
+    [screenHome, screenList, screenFav, screenContact, screenPrayerDay].forEach(s => { s.style.display = 'none'; });
     tabBarEl.classList.add('hidden');
     screenError.style.display = '';
     loaderEl.classList.add('hide');
@@ -1649,18 +1838,38 @@
       } catch (_) { window.open('https://t.me/zayd_usamah', '_blank'); }
     });
 
-    // Back button
+    // Back button (category list)
     backBtn.addEventListener('click', () => {
       haptic('light');
       if (history.length > 1) history.back();
       else setRoute({ screen: 'home' });
     });
 
-    // Telegram BackButton
+    // Back button (prayer day)
+    const prayerBackBtn = document.getElementById('prayer-back-btn');
+    if (prayerBackBtn) {
+      prayerBackBtn.addEventListener('click', () => {
+        haptic('light');
+        if (history.length > 1) history.back();
+        else setRoute({ screen: 'home' });
+      });
+    }
+
+    // Prayer card → drill into today's full schedule
+    const prayerCardEl = document.getElementById('prayer-card');
+    if (prayerCardEl) {
+      prayerCardEl.addEventListener('click', () => {
+        if (prayerCardEl.hidden) return;
+        haptic('light');
+        setRoute({ screen: 'prayer-day' });
+      });
+    }
+
+    // Telegram BackButton — works for any drill-down
     if (tg && tg.BackButton) {
       try {
         tg.BackButton.onClick(() => {
-          if (currentView.screen === 'list') {
+          if (isDrillDown(currentView)) {
             if (history.length > 1) history.back();
             else setRoute({ screen: 'home' });
           }
@@ -1680,7 +1889,7 @@
 
     document.getElementById('retry-btn').addEventListener('click', () => {
       screenError.style.display = 'none';
-      [screenHome, screenList, screenFav, screenContact].forEach(s => { s.style.display = ''; });
+      [screenHome, screenList, screenFav, screenContact, screenPrayerDay].forEach(s => { s.style.display = ''; });
       loaderEl.style.display = '';
       loaderEl.classList.remove('hide');
       boot();
