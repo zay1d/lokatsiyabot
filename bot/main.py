@@ -519,6 +519,37 @@ async def handle_prayer_info(request: web.Request) -> web.Response:
     return resp
 
 
+async def handle_prayer_today(request: web.Request) -> web.Response:
+    """Returns today's full 5-prayer schedule (KSA time) with imam + muezzin per prayer."""
+    now_utc = datetime.now(timezone.utc)
+    today_ksa = (now_utc + timedelta(hours=3)).date().isoformat()
+    raw = await _fetch_prayers_for(today_ksa)
+    if not raw:
+        return web.json_response({"available": False})
+
+    formatted = []
+    for entry in raw:
+        if entry.get("prayer") not in MAIN_PRAYERS:
+            continue
+        formatted.append(_format_prayer(entry))
+    formatted.sort(key=lambda p: p.get("time_utc", ""))
+
+    if not formatted:
+        return web.json_response({"available": False})
+
+    # Hijri date from the first prayer (same all day)
+    hijri = formatted[0].get("hijri", "")
+
+    resp = web.json_response({
+        "available": True,
+        "date": today_ksa,
+        "hijri": hijri,
+        "prayers": formatted,
+    })
+    resp.headers["Cache-Control"] = "public, max-age=300"
+    return resp
+
+
 async def handle_track(request: web.Request) -> web.Response:
     try:
         data = await request.json()
@@ -1336,6 +1367,7 @@ async def main() -> None:
     app.router.add_get("/api/catalog", handle_catalog)
     app.router.add_post("/api/track", handle_track)
     app.router.add_get("/api/prayer-info", handle_prayer_info)
+    app.router.add_get("/api/prayer-today", handle_prayer_today)
     app.router.add_get("/health", handle_health)
 
     runner = web.AppRunner(app)
