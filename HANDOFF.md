@@ -1,7 +1,7 @@
 # Handoff — Lokatsiyalar
 
 Снимок состояния проекта. Для деталей архитектуры см. `CLAUDE.md`.
-Последнее обновление: после добавления prayer-карточки (PR #22, #23).
+Последнее обновление: после переезда на новый VPS (2026-09-04).
 
 ## Текущее состояние
 
@@ -10,18 +10,27 @@
 - Дизайн «Friendly Card», сетка категорий 3 кол. + нижний таб-бар.
 - Каталог: 13 категорий, источник — `bot/catalog.json` на сервере.
 
-## ⚠️ Требует действия (deploy pending)
+## Переезд на новый VPS (2026-09-04)
 
-Последний бэкенд-коммит (`/api/prayer-info`, PR #22) **ещё не задеплоен
-на VPS**. До деплоя prayer-карточка просто скрыта (graceful degradation,
-ничего не сломано). Чтобы включить:
+Старый сервер `167.86.125.229` был уничтожен. Бэкенд поднят заново на
+`62.169.26.149` (тот же VPS, что и Saudia Service, соседний nginx-сайт):
+`/opt/lokatsiya-bot`, юнит `lokatsiya-bot` теперь под пользователем
+`lokatsiya` с sandbox-hardening, nginx + Let's Encrypt на
+`62-169-26-149.sslip.io`. Фронт на Pages не пострадал, только `API_URL`
+в `index.html` перебит на новый хост. Prayer-карточка, которая раньше
+ждала деплоя, теперь задеплоена (свежий клон `main`).
 
-```
-ssh root@167.86.125.229
-cd /opt/lokatsiya-bot && git pull
-sudo systemctl restart lokatsiya-bot
-curl -s http://127.0.0.1:8080/api/prayer-info   # ждём JSON со след. намазом
-```
+**Потеряно вместе со старым сервером (не восстановить):** живой
+`catalog.json` с локациями, добавленными через `/add` сверх сида из репо,
+`favorites.json`, `tracks.json` (статистика с нуля), `state.json`
+(связка ответов админа с юзерами). Каталог засеян из репозиторного
+`catalog.json`, 13 категорий.
+
+**Осталось владельцу:**
+1. Перевыпустить токен бота: он был вставлен в чат при переезде.
+   BotFather → `/revoke` → новый токен в `/opt/lokatsiya-bot/bot/.env`
+   на сервере → `systemctl restart lokatsiya-bot`.
+2. Заново добавить через `/add` локации, которых нет в репозиторном сиде.
 
 ## Что сделано за последние сессии (хронология)
 
@@ -69,8 +78,8 @@ curl -s http://127.0.0.1:8080/api/prayer-info   # ждём JSON со след. �
 ## Контрольные проверки после деплоя
 
 ```
-curl -s https://167-86-125-229.sslip.io/health           # {"ok":true,...}
-curl -s https://167-86-125-229.sslip.io/api/catalog | head
-curl -s https://167-86-125-229.sslip.io/api/prayer-info | head
+curl -s https://62-169-26-149.sslip.io/health           # {"ok":true,...}
+curl -s https://62-169-26-149.sslip.io/api/catalog | head
+curl -s https://62-169-26-149.sslip.io/api/prayer-info | head
 ss -ltnp | grep :8080                                     # 127.0.0.1:8080
 ```
