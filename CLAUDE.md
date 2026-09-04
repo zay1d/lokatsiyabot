@@ -10,11 +10,12 @@ Telegram-канале `@lokatsiyamed`. Интерфейс на узбекско�
 |---|---|
 | Фронт (Mini App) | https://zay1d.github.io/lokatsiyabot/ (GitHub Pages, без build-шага) |
 | Репо | https://github.com/zay1d/lokatsiyabot |
+| Бот | `@madina_lokatsiyalar_bot` (Lokatsiya Medina) |
 | Рабочая ветка | `claude/review-tg-mini-app-JR4ll` → PR в `main` |
-| Бэкенд | Contabo VPS, `ssh root@167.86.125.229` |
+| Бэкенд | Contabo VPS, `ssh root@62.169.26.149` |
 | App dir на VPS | `/opt/lokatsiya-bot/` |
-| Backend API | `https://167-86-125-229.sslip.io` (nginx HTTPS → `127.0.0.1:8080`) |
-| systemd unit | `lokatsiya-bot` |
+| Backend API | `https://62-169-26-149.sslip.io` (nginx HTTPS → `127.0.0.1:8080`) |
+| systemd unit | `lokatsiya-bot`, работает как непривилегированный `lokatsiya` (ProtectSystem=strict, ReadWritePaths только `bot/` + лог). Лог: `/var/log/lokatsiya-bot.log` |
 | Автор | @zayd_usamah |
 
 ## Архитектура
@@ -36,7 +37,7 @@ Telegram-канале `@lokatsiyamed`. Интерфейс на узбекско�
 
 **Бэк** (`bot/*.py`):
 ```
-ssh root@167.86.125.229
+ssh root@62.169.26.149
 cd /opt/lokatsiya-bot && git pull
 sudo systemctl restart lokatsiya-bot
 journalctl -u lokatsiya-bot -n 30 --no-pager
