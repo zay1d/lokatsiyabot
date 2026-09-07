@@ -12,23 +12,23 @@
 <style>
   :root {
     /* Friendly Card palette (Stitch design system) */
-    --bg: #06140e;
-    --bg-elev: #030b07;
-    --surface: #0c1f17;
-    --surface-2: #113024;
-    --surface-3: #17402f;
-    --tile: #113024;
-    --tile-2: #1c4a37;
-    --border: rgba(30, 203, 139, 0.10);
-    --border-strong: rgba(30, 203, 139, 0.22);
+    --bg: #0c141b;
+    --bg-elev: #070f15;
+    --surface: #151c23;
+    --surface-2: #192027;
+    --surface-3: #232b32;
+    --tile: #192027;
+    --tile-2: #2e363d;
+    --border: rgba(14, 155, 120, 0.10);
+    --border-strong: rgba(14, 155, 120, 0.22);
     --text: #dbe3ed;
     --text-dim: #bbcabe;
     --text-mute: #859489;
-    --accent: #0f9d70;
-    --accent-bright: #1ecb8b;
-    --accent-deep: #022018;
-    --accent-soft: rgba(30, 203, 139, 0.08);
-    --accent-glow: rgba(30, 203, 139, 0.22);
+    --accent: #076b55;
+    --accent-bright: #0e9b78;
+    --accent-deep: #02231b;
+    --accent-soft: rgba(14, 155, 120, 0.08);
+    --accent-glow: rgba(14, 155, 120, 0.22);
     --error: #ff7e7e;
     --pad: 20px;
     --radius-card: 22px;
@@ -267,9 +267,9 @@
     margin: 16px var(--pad) 0;
     border-radius: var(--radius-card);
     padding: 18px;
-    background: linear-gradient(135deg, rgba(30, 203, 139, 0.16), rgba(30, 203, 139, 0.04));
+    background: linear-gradient(135deg, rgba(14, 155, 120, 0.16), rgba(14, 155, 120, 0.04));
     border: 1px solid var(--border-strong);
-    box-shadow: 0 0 32px rgba(30, 203, 139, 0.10);
+    box-shadow: 0 0 32px rgba(14, 155, 120, 0.10);
     display: flex; align-items: center; gap: 14px;
     position: relative;
     cursor: pointer;
@@ -310,9 +310,9 @@
     margin: 16px var(--pad) 0;
     border-radius: var(--radius-card);
     padding: 16px 16px 18px;
-    background: linear-gradient(135deg, rgba(30, 203, 139, 0.10), rgba(30, 203, 139, 0.02));
+    background: linear-gradient(135deg, rgba(14, 155, 120, 0.10), rgba(14, 155, 120, 0.02));
     border: 1px solid var(--border-strong);
-    box-shadow: 0 0 28px rgba(30, 203, 139, 0.08);
+    box-shadow: 0 0 28px rgba(14, 155, 120, 0.08);
     position: relative;
     z-index: 2;
     cursor: pointer;
@@ -322,7 +322,7 @@
   .prayer-card:active {
     transform: scale(0.985);
     border-color: var(--accent);
-    box-shadow: 0 0 36px rgba(30, 203, 139, 0.14);
+    box-shadow: 0 0 36px rgba(14, 155, 120, 0.14);
   }
   .prayer-tap-hint {
     position: absolute;
@@ -354,9 +354,9 @@
     transition: border-color 200ms ease, background 160ms ease;
   }
   .prayer-day-item.is-next {
-    background: linear-gradient(135deg, rgba(30, 203, 139, 0.10), rgba(30, 203, 139, 0.02));
+    background: linear-gradient(135deg, rgba(14, 155, 120, 0.10), rgba(14, 155, 120, 0.02));
     border-color: var(--border-strong);
-    box-shadow: 0 0 22px rgba(30, 203, 139, 0.10);
+    box-shadow: 0 0 22px rgba(14, 155, 120, 0.10);
   }
   .prayer-day-item.is-past { opacity: 0.6; }
   .prayer-day-when {
@@ -491,7 +491,7 @@
     transform: scale(0.96);
     background: var(--surface-2);
     border-color: var(--border-strong);
-    box-shadow: 0 0 18px rgba(30, 203, 139, 0.12);
+    box-shadow: 0 0 18px rgba(14, 155, 120, 0.12);
   }
   .cat-tile-icon {
     width: 46px; height: 46px;
@@ -548,7 +548,7 @@
     transform: scale(0.98);
     background: var(--surface-2);
     border-color: var(--border-strong);
-    box-shadow: 0 0 20px rgba(30, 203, 139, 0.10);
+    box-shadow: 0 0 20px rgba(14, 155, 120, 0.10);
   }
   .loc-tile {
     width: 42px; height: 42px;
@@ -769,7 +769,7 @@
     transform: translateX(-50%);
     width: 100%;
     max-width: 480px;
-    background: rgba(6, 20, 14, 0.92);
+    background: rgba(12, 20, 27, 0.92);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-top: 1px solid var(--border);
@@ -1065,8 +1065,8 @@
       tg.ready();
       tg.expand();
       document.body.classList.add('tg');
-      try { tg.setHeaderColor && tg.setHeaderColor('#06140e'); } catch (e) {}
-      try { tg.setBackgroundColor && tg.setBackgroundColor('#06140e'); } catch (e) {}
+      try { tg.setHeaderColor && tg.setHeaderColor('#0c141b'); } catch (e) {}
+      try { tg.setBackgroundColor && tg.setBackgroundColor('#0c141b'); } catch (e) {}
     } catch (e) {}
   }
 
